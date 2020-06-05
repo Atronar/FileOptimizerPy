@@ -1413,6 +1413,15 @@ def optimise(sInputFile, silentMode=False):
            "PercentBytes": iPercentBytes,
            "Time": sTime.split(' sec')[0]}
 
+def optimiseDir(dirName, silentMode=False):
+   result_list = [];
+   if os.path.isdir(dirName):
+      for elem in os.scandir(dirName):
+         result_list.extend(optimiseDir(elem.path, silentMode=silentMode));
+   else:
+      result_list.append(optimise(dirName, silentMode=silentMode));
+   return result_list;
+
 if __name__ == '__main__':
    parser = argparse.ArgumentParser();
    parser.add_argument('input',nargs='*',help='input file');
@@ -1422,3 +1431,5 @@ if __name__ == '__main__':
    for inputfile in args.input:
       if inputfile not in deduped_input:
          deduped_input.append(inputfile);
+   for inputfile in deduped_input:
+      optimiseDir(inputfile, silentMode=args.silent)
