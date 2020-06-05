@@ -265,7 +265,7 @@ def RunPlugin(psStatus, psCommandLine, psInputFile, psOutputFile, piErrorMin, pi
       KI_GRID_OPTIMIZED = lSizeNew
 
    if not silentMode:
-      print(sInputFile, Extension, KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED, f"{KI_GRID_STATUS}{' '*10}", sep="\t", end="\r");
+      print(f"{GetShortName(sInputFile)} ", f" {Extension} ", f" {KI_GRID_ORIGINAL} ", f" {KI_GRID_OPTIMIZED} ", f" {KI_GRID_STATUS} ", sep="\t", end="\r");
    Log(3, f"Start: {time.strftime('%Y/%m/%d %H:%M:%S',time.localtime(dteStart))}\t" \
           f"End: {time.strftime('%Y/%m/%d %H:%M:%S',time.localtime(dteEnd))}\t" \
           f"Level: {settings.get('Options','Level')}\t" \
@@ -1406,7 +1406,7 @@ def optimise(sInputFile, silentMode=False):
       KI_GRID_STATUS = sCaption;
 
    if not silentMode:
-      print(sInputFile, thisExt, KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED, f"{KI_GRID_STATUS}{' '*10}", sep="\t", end="\n");
+      print(f"{GetShortName(sInputFile)} ", f" {thisExt} ", f" {KI_GRID_ORIGINAL} ", f" {KI_GRID_OPTIMIZED} ", f" {KI_GRID_STATUS} ", sep="\t", end="\n");
    return {"InputFile": os.path.abspath(sInputFile),
            "Extension": thisExt,
            "Original": KI_GRID_ORIGINAL,
