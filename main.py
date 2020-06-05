@@ -14,6 +14,7 @@ import tempfile
 import time
 import sys
 import argparse
+import pathlib
 
 settings = RawConfigParser(allow_no_value=True);
 settings.read("settings.ini");
@@ -1422,6 +1423,44 @@ def optimiseDir(dirName, silentMode=False):
    else:
       result_list.append(optimise(dirName, silentMode=silentMode));
    return result_list;
+
+class FileOptimiser:
+   def __init__(self,filelist=None):
+      if filelist:
+         self.getFiles(filelist);
+      else:
+         self.files = ();
+
+   def recursiveFilesFromDir(self, filelist):
+      if hasattr(filelist, 'stat'):
+         if filelist.is_dir():
+            for path in filelist.iterdir():
+               for f in self.recursiveFilesFromDir(path):
+                  yield f
+         else:
+            yield filelist.resolve();
+      elif isinstance(filelist, str):
+         for f in self.recursiveFilesFromDir(pathlib.Path(filelist)):
+            yield f
+      else:
+         for path in filelist:
+            for f in self.recursiveFilesFromDir(path):
+               yield f
+
+   def getFiles(self,filelist):
+      self.files = self.recursiveFilesFromDir(filelist);
+
+   def optimise(self,silentMode=False):
+      result_list = [];
+      for elem in self.files:
+         result_list.append(optimise(f"{elem}", silentMode=silentMode));
+      return result_list;
+
+   def filter(self,filter_func):
+      self.files = filter(filter_func, list(self.files));
+
+   def sort(self,sort_func, reverse=False):
+      self.files = sorted(list(self.files), key=sort_func, reverse=reverse)
 
 if __name__ == '__main__':
    parser = argparse.ArgumentParser();
