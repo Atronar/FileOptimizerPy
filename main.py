@@ -1385,7 +1385,6 @@ def optimise(sInputFile, silentMode=False):
    if    KI_GRID_STATUS == "Pending" \
       or KI_GRID_STATUS == "Copying to Recyclebin..." \
       or KI_GRID_STATUS == "Creating backup...":
-            print(KI_GRID_STATUS)
             KI_GRID_STATUS = "Skipped";
             iPercentBytes = 1.0;
             sTime = '0';
@@ -1397,7 +1396,9 @@ def optimise(sInputFile, silentMode=False):
       acTime = iEndTicks - iStartTicks;
       sTime = time.gmtime(acTime);
       sTime = ":".join(f"{t}" for t in (sTime.tm_mday-1, sTime.tm_hour, sTime.tm_min, sTime.tm_sec) if t)
-      if ":" not in sTime:
+      if not sTime:
+         sTime = f"0 sec"
+      elif ":" not in sTime:
          sTime = f"{sTime} sec"
 
       sCaption = f"Done {iPercentBytes:.2%} in {sTime}";
