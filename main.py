@@ -1,3 +1,9 @@
+######
+# Based on https://sourceforge.net/p/nikkhokkho/code/HEAD/tree/trunk/FileOptimizer/Source/cppMain.cpp
+# and https://sourceforge.net/p/nikkhokkho/code/HEAD/tree/trunk/FileOptimizer/Source/clsUtil.cpp
+# commit ver [r1562] 2020-05-30
+# Author of original cpp code: Nikkho
+######
 import os
 import multiprocessing
 import subprocess

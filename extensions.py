@@ -1,3 +1,8 @@
+######
+# Define list from https://sourceforge.net/p/nikkhokkho/code/HEAD/tree/trunk/FileOptimizer/Source/cppMain.h
+# commit ver [r1516] 2019-09-03
+# Author of original cpp code: Nikkho
+######
 KS_EXTENSION_BMP = (".bmp", ".dib",)
 KS_EXTENSION_CSS = (".css",)
 KS_EXTENSION_DLL = (".dll", ".bpl", ".cpl", ".drv", ".icl", ".lzl", ".ocx", ".rll", ".sys", ".vbx",)
