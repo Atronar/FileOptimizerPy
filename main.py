@@ -1396,6 +1396,8 @@ def optimise(sInputFile):
       or KI_GRID_STATUS == "Creating backup...":
             print(KI_GRID_STATUS)
             KI_GRID_STATUS = "Skipped";
+            iPercentBytes = 1.0;
+            sTime = '0';
    elif KI_GRID_STATUS != "Optimized":
       iPercentBytes = KI_GRID_OPTIMIZED / KI_GRID_ORIGINAL;
 
@@ -1411,6 +1413,13 @@ def optimise(sInputFile):
       KI_GRID_STATUS = sCaption;
 
    print(sInputFile, thisExt, KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED, f"{KI_GRID_STATUS}{' '*10}", sep="\t", end="\n");
+   return {"InputFile": os.path.abspath(sInputFile),
+           "Extension": thisExt,
+           "Original": KI_GRID_ORIGINAL,
+           "Optimized": KI_GRID_OPTIMIZED,
+           "Status": "Done" if "Done" in KI_GRID_STATUS else KI_GRID_STATUS,
+           "PercentBytes": iPercentBytes,
+           "Time": sTime.split(' sec')[0]}
 
 if __name__ == '__main__':
    optimise("20180.png")
