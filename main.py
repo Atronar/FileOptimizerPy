@@ -13,6 +13,7 @@ import random
 import tempfile
 import time
 import sys
+import argparse
 
 settings = RawConfigParser(allow_no_value=True);
 settings.read("settings.ini");
@@ -1422,4 +1423,11 @@ def optimise(sInputFile):
            "Time": sTime.split(' sec')[0]}
 
 if __name__ == '__main__':
-   optimise("20180.png")
+   parser = argparse.ArgumentParser();
+   parser.add_argument('input',nargs='*',help='input file');
+   parser.add_argument('-s','--silent', action='store_true', help='run without output print');
+   args = parser.parse_args();
+   deduped_input = []
+   for inputfile in args.input:
+      if inputfile not in deduped_input:
+         deduped_input.append(inputfile);
