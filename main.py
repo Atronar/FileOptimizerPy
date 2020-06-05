@@ -650,7 +650,7 @@ def optimise(sInputFile):
                iLevel = settings.getint('Options','LeanifyIterations');
             else:
                iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
-            sFlags += "-i {iLevel} ";
+            sFlags += f"-i {iLevel} ";
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (2/2)",
                       f"{sPluginsDirectory}leanify.exe -q {sFlags}\"%TMPINPUTFILE%\"",
                       sInputFile, "", 0, 0, thisExt, KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED, KI_GRID_STATUS);
@@ -925,13 +925,13 @@ def optimise(sInputFile):
                sFlags = "";
                # Custom mode
                if settings.get('Options','PDFProfile') == "Custom":
-                  sFlags += "-dPDFSETTINGS=/ebook -dDownsampleColorImages=true -dColorImageResolution={settings.getint('Options','PDFCustomDPI')} -dDownsampleGrayImages=true -dGrayImageResolution={settings.getint('Options','PDFCustomDPI')} -dDownsampleMonoImages=true -dMonoImageResolution={settings.getint('Options','PDFCustomDPI')} ";
+                  sFlags += f"-dPDFSETTINGS=/ebook -dDownsampleColorImages=true -dColorImageResolution={settings.getint('Options','PDFCustomDPI')} -dDownsampleGrayImages=true -dGrayImageResolution={settings.getint('Options','PDFCustomDPI')} -dDownsampleMonoImages=true -dMonoImageResolution={settings.getint('Options','PDFCustomDPI')} ";
                # No downsampling
                elif settings.get('Options','PDFProfile') == "none":
                   sFlags += "-dPDFSETTINGS=/default -c \".setpdfwrite <</ColorACSImageDict>[1 1 1 1] /VSamples [1 1 1 1] /Blend 1>> /GrayACSImageDict<</QFactor>[1 1 1 1] /VSamples [1 1 1 1] /Blend 1>>>> setdistillerparams\" ";
                # Built in downsample modes: screen, ebook, printer, prepress
                else:
-                  sFlags += "-dPDFSETTINGS=/{settings.get('Options','PDFProfile')} ";
+                  sFlags += f"-dPDFSETTINGS=/{settings.get('Options','PDFProfile')} ";
 
                sFlags += "-dColorImageDownsampleType=/Bicubic -dGrayImageDownsampleType=/Bicubic -dMonoImageDownsampleType=/Bicubic -dOptimize=true -dConvertCMYKImagesToRGB=true -dColorConversionStrategy=/sRGB -dPrinted=false -q -dBATCH -dNOPAUSE -dSAFER -dDELAYSAFER -dNOPROMPT -sDEVICE=pdfwrite -dDetectDuplicateImages=true -dAutoRotatePages=/None -dCompatibilityLevel=1.4 ";
 
