@@ -366,7 +366,7 @@ def IsPDFLayered(pacFile):
    return bRes;
 
 # Оптимизация файла
-def optimise(sInputFile, silentMode=False):
+def optimise(sInputFile, silentMode=False, res={}):
    basename = os.path.basename(sInputFile);
    KI_GRID_OPTIMIZED = KI_GRID_ORIGINAL = 0;
    thisExt = ""
@@ -1394,7 +1394,7 @@ def optimise(sInputFile, silentMode=False):
       or KI_GRID_STATUS == "Creating backup...":
             KI_GRID_STATUS = "Skipped";
             iPercentBytes = 1.0;
-            sTime = '0';
+            acTime = 0.0;
    elif KI_GRID_STATUS != "Optimized":
       iPercentBytes = KI_GRID_OPTIMIZED / KI_GRID_ORIGINAL;
 
@@ -1402,24 +1402,25 @@ def optimise(sInputFile, silentMode=False):
       iEndTicks = time.perf_counter();
       acTime = iEndTicks - iStartTicks;
       sTime = time.gmtime(acTime);
-      sTime = ":".join(f"{t}" for t in (sTime.tm_mday-1, sTime.tm_hour, sTime.tm_min, sTime.tm_sec) if t)
+      sTime = ":".join(f"{t}" for t in (sTime.tm_mday-1, sTime.tm_hour, sTime.tm_min, sTime.tm_sec) if t);
       if not sTime:
-         sTime = f"0 sec"
+         sTime = f"0 sec";
       elif ":" not in sTime:
-         sTime = f"{sTime} sec"
+         sTime = f"{sTime} sec";
 
       sCaption = f"Done {iPercentBytes:.2%} in {sTime}";
       KI_GRID_STATUS = sCaption;
 
    if not silentMode:
       print(f"{GetShortName(sInputFile)} ", f" {thisExt} ", f" {KI_GRID_ORIGINAL} ", f" {KI_GRID_OPTIMIZED} ", f" {KI_GRID_STATUS} ", sep="\t", end="\n");
-   return {"InputFile": os.path.abspath(sInputFile),
-           "Extension": thisExt,
-           "Original": KI_GRID_ORIGINAL,
-           "Optimized": KI_GRID_OPTIMIZED,
-           "Status": "Done" if "Done" in KI_GRID_STATUS else KI_GRID_STATUS,
-           "PercentBytes": iPercentBytes,
-           "Time": sTime.split(' sec')[0]}
+   res.update({"InputFile": os.path.abspath(sInputFile),
+               "Extension": thisExt,
+               "Original": KI_GRID_ORIGINAL,
+               "Optimized": KI_GRID_OPTIMIZED,
+               "Status": "Done" if "Done" in KI_GRID_STATUS else KI_GRID_STATUS,
+               "PercentBytes": iPercentBytes,
+               "Time": acTime});
+   return res
 
 def optimiseDir(dirName, silentMode=False):
    result_list = [];
@@ -1456,17 +1457,57 @@ class FileOptimiser:
    def getFiles(self,filelist):
       self.files = self.recursiveFilesFromDir(filelist);
 
-   def optimise(self,silentMode=False):
+   def optimise(self,silentMode=False,processes=None):
+      # We should use optimise_parallel() if processes more then one
+      if processes and processes>1:
+         return self.optimise_parallel(silentMode=silentMode,processes=processes);
+      else:
+         result_list = [];
+         for elem in self.files:
+            result_list.append(optimise(f"{elem}", silentMode=silentMode));
+         return result_list;
+
+   def optimise_parallel(self,silentMode=False,processes=4):
       result_list = [];
+      process_list = [];
+      running_processes = [];
+      # Pre-creating processes for every file
+      manager = multiprocessing.Manager();
       for elem in self.files:
-         result_list.append(optimise(f"{elem}", silentMode=silentMode));
-      return result_list;
+         res = manager.dict();
+         process_list.append(multiprocessing.Process(target=optimise,
+                                                     args=(f"{elem}",),
+                                                     kwargs={'silentMode': silentMode,
+                                                             'res': res}
+                                                    )
+                            );
+         result_list.append(res);
+      
+      next_process = 0;
+      closed_processes_count = 0;
+      while next_process<len(process_list):
+         # Run pre-created processes
+         if len(running_processes)<processes:
+            running_processes.append(process_list[next_process]);
+            process_list[next_process].start();
+            next_process += 1;
+         # Wait for closing any running process
+         else:
+            for running_process in running_processes:
+               if not running_process.is_alive():
+                  running_processes.remove(running_process);
+                  closed_processes_count += 1;
+      # Wait for closing processes
+      for running_process in running_processes:
+         running_process.join();
+
+      return list(map(dict,result_list));
 
    def filter(self,filter_func):
       self.files = filter(filter_func, list(self.files));
 
    def sort(self,sort_func, reverse=False):
-      self.files = sorted(list(self.files), key=sort_func, reverse=reverse)
+      self.files = sorted(list(self.files), key=sort_func, reverse=reverse);
 
 if __name__ == '__main__':
    parser = argparse.ArgumentParser();
