@@ -28,6 +28,10 @@ __all__ = [
 ]
 
 def createSettings(settings_file):
+   """Create a new settings file.
+
+   `settings_file` is a path string to this file.
+   """
    settings = ConfigParser(allow_no_value=True);
    settings.add_section('Paths');
    settings.set('Paths','PluginsDirectory',r'C:\Program Files\FileOptimizer\Plugins64');
@@ -111,6 +115,11 @@ settings.read_dict(ini);
 
 # Получение короткого пути в Windows
 def GetShortName(psLongName):
+   '''Returns a short path form in Windows.
+   For non-Win systems returns path itself.
+
+   `psLongName` is a path string.
+   '''
    try:
       import win32api
       import pywintypes
@@ -133,7 +142,16 @@ def GetShortName(psLongName):
 
 sPluginsDirectory = GetShortName(os.path.join(os.path.normpath(settings.get('Paths','PluginsDirectory')), ""))
 
+# Function name refers to similar function from cppMain.cpp
 def SetCellFileValue(psValue):
+   '''Returns a path string in form chosen in settings option "FilenameFormat":
+   0: only filename;
+   1: path+filename in short form;
+   2: driveletter + :\+partial path if fits+... last part of filename;
+   3: full path+filename.
+
+   `psValue` is a path string.
+   '''
    FilenameFormat = settings.getint('Options','FilenameFormat');
    # only filename
    if FilenameFormat == 1:
@@ -152,6 +170,12 @@ def SetCellFileValue(psValue):
    return sRes;
 
 def GetFileAttributes(filename):
+   '''Returns file system attributes for a specified file or directory as int.
+
+   `filename` is a path string.
+
+   Retuns None if can't get attributes.
+   '''
    try:
       import win32api
       return win32api.GetFileAttributes(filename);
@@ -159,6 +183,14 @@ def GetFileAttributes(filename):
       return None;
 
 def SetFileAttributes(filename, hexattributes):
+   '''Sets the attributes for a file or directory.
+
+   `filename` is a path string.
+
+   `hexattributes` is file attributes to set for the file in int form.
+
+   If succeeds returns True, if fails returns False.
+   '''
    try:
       import win32api
       win32api.SetFileAttributes(filename, hexattributes);
@@ -168,6 +200,12 @@ def SetFileAttributes(filename, hexattributes):
 
 # Определение типа файла
 def GetExtensionByContent(filename):
+   '''Returns list of extensions with dot.
+   Extension determines by content file.
+   If can't determine gets extension from filename.
+
+   `filename` is a file path string.
+   '''
    # Для изображений (rgb, gif, pbm, pgm, ppm, tiff, rast, xbm, jpeg, bmp, png, webp, exr) достаточно imghdr
    Extension = imghdr.what(filename)
    # fleep распознаёт большинство файлов по содержимому
@@ -225,11 +263,21 @@ def GetExtensionByContent(filename):
 
 # Получение пути к логам
 def GetLogPath():
+   '''Returns a path string to log file.
+   '''
    acPath = GetShortName(os.path.join(os.path.expanduser('~'), "FileOptimizer.log"));
    return acPath;
 
 # Запись в логи
 def Log(piLevel, pacValue, piDesiredLevel):
+   '''Writing to end of log file.
+
+   `piLevel` is level of this message.
+
+   `pacValue` is string message for adding to file.
+
+   `piDesiredLevel` is desired level for logging, usually from settings option "Level".
+   '''
    if piDesiredLevel > piLevel:
       acPath = GetLogPath();
       with open(acPath, "at", encoding="utf-8") as pLog:
@@ -238,10 +286,31 @@ def Log(piLevel, pacValue, piDesiredLevel):
 
 # Проверка разрядности системы
 def IsWindows64():
+   '''Checking system bitness.'''
    return sys.maxsize > 2**32;
 
 # Запуск плагина оптимизации
 def RunPlugin(psStatus, psCommandLine, psInputFile, psOutputFile, piErrorMin, piErrorMax, ErrorsList=[], Extension="", KI_GRID_ORIGINAL=0, KI_GRID_OPTIMIZED=0, KI_GRID_STATUS="", silentMode=False):
+   '''Running optimisation plugin.
+
+   `psStatus` is message contains status of optimisation: index and plugin name.
+
+   `psCommandLine` is a command string for running process.
+
+   `psInputFile` is a path string of input file.
+
+   `psOutputFile` is a path string of output file.
+
+   `piErrorMin`, `piErrorMax`, are range of acceptable exit codes.
+
+   `ErrorsList` is list of acceptable exit codes.
+
+   `Extension`, `KI_GRID_ORIGINAL`, `KI_GRID_OPTIMIZED`, `KI_GRID_STATUS` are parameters for output print.
+
+   `silentMode` is a flag of running without output print.
+
+   Returns tuple with exit code, optimised size and status string.
+   '''
    # Check if it is an excluded plugins
    PluginMask = settings.get('Options','DisablePluginMask').upper().split(";");
    for Token in PluginMask:
@@ -385,6 +454,14 @@ def RunPlugin(psStatus, psCommandLine, psInputFile, psOutputFile, piErrorMin, pi
 
 # Запуск подпроцесса с помощью команды pacProcess
 def RunProcess(pacProcess, pbWait):
+   '''Running subprocess.
+
+   `pacProcess` is a command string.
+
+   `pbWait` is a flag for waiting exit process.
+
+   Returns exit code of process.
+   '''
    udtSI = subprocess.STARTUPINFO(dwFlags=subprocess.STARTF_USESHOWWINDOW,
                                   wShowWindow=subprocess.SW_HIDE)
 
@@ -405,6 +482,12 @@ def RunProcess(pacProcess, pbWait):
 
 # Распознание APNG
 def IsAPNG(pacFile):
+   '''Determine APNG.
+
+   `pacFile` is a path to file.
+
+   Returns True if file is animated PNG.
+   '''
    bRes = False;
    if os.stat(pacFile).st_size > 0:
       with open(pacFile,'rb') as f:
@@ -421,6 +504,12 @@ def IsAPNG(pacFile):
 
 # Распознание .exe
 def IsEXESFX(pacFile):
+   '''Determine SFX EXE.
+
+   `pacFile` is a path to file.
+
+   Returns True if file is self-extracting archive EXE.
+   '''
    bRes = False;
    with open(pacFile,'rb') as f:
       acBuffer = f.read(2);
@@ -454,6 +543,12 @@ def IsEXESFX(pacFile):
 
 # Распознание PDF со слоями
 def IsPDFLayered(pacFile):
+   '''Determine layered PDF.
+
+   `pacFile` is a path to file.
+
+   Returns True if file is PDF with layers.
+   '''
    bRes = False;
    with open(pacFile,'rb') as f:
       acBuffer = f.read();
@@ -462,8 +557,17 @@ def IsPDFLayered(pacFile):
       bRes = True;
    return bRes;
 
-# Single file optimisation
 def optimise(sInputFile, silentMode=False, res={}):
+   '''Single file optimisation.
+
+   `sInputFile` is a path to file needs for optimisation.
+
+   `silentMode` is a flag of running without output print.
+
+   `res` is returns dict with result.
+
+   Returns `res`.
+   '''
    basename = os.path.basename(sInputFile);
    KI_GRID_OPTIMIZED = KI_GRID_ORIGINAL = 0;
    thisExt = ""
@@ -1520,6 +1624,14 @@ def optimise(sInputFile, silentMode=False, res={}):
    return res
 
 def optimiseDir(dirName, silentMode=False):
+   '''Optimisation all file in directory.
+
+   `dirName` is a path of directory.
+
+   `silentMode` is a flag of running without output print.
+
+   Returns list of results optimisation.
+   '''
    result_list = [];
    if os.path.isdir(dirName):
       for elem in os.scandir(dirName):
@@ -1529,6 +1641,10 @@ def optimiseDir(dirName, silentMode=False):
    return result_list;
 
 class FileOptimiser:
+   """Class for manage files and order before optimisation and using parallelism of processes.
+
+   `filelist` is iterable contains files to convert to list of Path objects as self.files.
+   """
    def __init__(self,filelist=None):
       if filelist:
          self.getFiles(filelist);
@@ -1536,6 +1652,10 @@ class FileOptimiser:
          self.files = ();
 
    def recursiveFilesFromDir(self, filelist):
+      '''Recursive yielding files as Path object in directory.
+
+      `filelist` is Path object, path string or iterable of strings.
+      '''
       if hasattr(filelist, 'stat'):
          if filelist.is_dir():
             for path in filelist.iterdir():
@@ -1552,9 +1672,19 @@ class FileOptimiser:
                yield f
 
    def getFiles(self,filelist):
-      self.files = self.recursiveFilesFromDir(filelist);
+      '''Rewriting self.files to new filelist.
+
+      `filelist` is Path object, path string or iterable of strings.
+      '''
+      self.files = list(self.recursiveFilesFromDir(filelist));
 
    def optimise(self,silentMode=False,processes=None):
+      '''Optimisation all files from self.file.
+
+      `silentMode` is a flag of running without output print.
+
+      `processes` is a count processes for parallel running.
+      '''
       # We should use optimise_parallel() if processes more then one
       if processes and processes>1:
          return self.optimise_parallel(silentMode=silentMode,processes=processes);
@@ -1568,6 +1698,12 @@ class FileOptimiser:
       return self.optimise(*args, **kwargs);
 
    def optimise_parallel(self,silentMode=False,processes=4):
+      '''Parallel optimisation all files from self.file.
+
+      `silentMode` is a flag of running without output print.
+
+      `processes` is a count processes for parallel running.
+      '''
       result_list = [];
       process_list = [];
       running_processes = [];
@@ -1610,9 +1746,17 @@ class FileOptimiser:
       return self.optimise_parallel(*args, **kwargs);
 
    def filter(self,filter_func):
+      '''Filtering files which True in funnction. 
+      '''
       self.files = filter(filter_func, list(self.files));
 
    def sort(self,sort_func, reverse=False):
+      '''Sorting file in the order which they will be optimised.
+
+      `sort_func` is sorting function.
+
+      `reverse` is reversin flag.
+      '''
       self.files = sorted(list(self.files), key=sort_func, reverse=reverse);
 
 # Synonyms with -ize
