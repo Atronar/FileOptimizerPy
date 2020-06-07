@@ -1,9 +1,9 @@
-######
-# Based on https://sourceforge.net/p/nikkhokkho/code/HEAD/tree/trunk/FileOptimizer/Source/cppMain.cpp
-# and https://sourceforge.net/p/nikkhokkho/code/HEAD/tree/trunk/FileOptimizer/Source/clsUtil.cpp
-# commit ver [r1562] 2020-05-30
-# Author of original cpp code: Nikkho
-######
+'''
+Based on https://sourceforge.net/p/nikkhokkho/code/HEAD/tree/trunk/FileOptimizer/Source/cppMain.cpp
+and https://sourceforge.net/p/nikkhokkho/code/HEAD/tree/trunk/FileOptimizer/Source/clsUtil.cpp
+commit ver [r1562] 2020-05-30
+Author of original cpp code: Nikkho
+'''
 import os
 import multiprocessing
 import subprocess
@@ -14,16 +14,95 @@ import re
 import imghdr
 import fleep
 import mimetypes
-from extensions import *
 import random
 import tempfile
 import time
 import sys
-import argparse
 import pathlib
+from .extensions import *
+
+__all__ = [
+  "FileOptimiser", "FileOptimizer",
+  "optimise", "optimize",
+  "optimiseDir", "optimizeDir"
+]
+
+def createSettings(settings_file):
+   settings = ConfigParser(allow_no_value=True);
+   settings.add_section('Paths');
+   settings.set('Paths','PluginsDirectory',r'C:\Program Files\FileOptimizer\Plugins64');
+   settings.add_section('Options');
+   settings.set('Options','BMPCopyMetadata', "false		; Boolean. Default: false. Copy file metadata. Else strip all unneeded information.");
+   settings.set('Options', 'CSSEnableTidy', "false		; Boolean. Default: false. Enable tidy. Results in smaller files, but can happen they are not editable anymore.");
+   settings.set('Options', 'CSSTemplate', "low		; String. Default 'low'. Compression template, from safer and worse compression, to highest compression.");
+   settings.set('Options', 'EXEDisablePETrim', "false		; Boolean. Default: false. Disable PETrim. When enabled, PETrim will not be used, resulting in less EXE corruption at the cost of larger file size.");
+   settings.set('Options', 'GIFCopyMetadata', "true		; Boolean. Default: false. Copy file metadata. Else strip all unneeded information.");
+   settings.set('Options', 'GZCopyMetadata', "true		; Boolean. Default: false. Copy file metadata. Else strip all unneeded information.");
+   settings.set('Options', 'HTMLEnableTidy', "false		; Boolean. Default: false. Enable Tidy. Results in smaller files, but can happen they are not editable anymore. Note that this applies to both SVG and HTML file types.");
+   settings.set('Options', 'JPEGCopyMetadata', "true		; Boolean. Default: false. Copy file metadata. Else strip all unneeded information");
+   settings.set('Options', 'JPEGUseArithmeticEncoding', "false		; Boolean. Default: false. Arithmetic encoding gives additional saving reductions, but is incompatible with most programs.");
+   settings.set('Options', 'JSEnableJSMin', "false		; Boolean. Default: false. Enable jsmin. Results in smaller files, but can happen they are not editable anymore.");
+   settings.set('Options', 'LUAEnableLeanify', "false		; Boolean. Default: false. Enable Leanify. Results in smaller files, but can happen they are not editable anymore.");
+   settings.set('Options', 'MiscCopyMetadata', "true		; Boolean. Default: false. Copy file metadata. Else strip all unneeded information.");
+   settings.set('Options', 'MP3CopyMetadata', "true		; Boolean. Default: false. Copy file metadata. Else strip all unneeded information.");
+   settings.set('Options', 'PCXCopyMetadata', "false		; Boolean. Default: false. Copy file metadata. Else strip all unneeded information.");
+   settings.set('Options', 'PDFProfile', "none		; String. Default 'none'. Compression profile, from less size, to best quality.");
+   settings.set('Options', 'PDFCustomDPI', "150		; Number. Default: 150. When custom profile is choosen, it allows you to specify a custom DPI for downsampling images.");
+   settings.set('Options', 'PNGCopyMetadata', "true		; Boolean. Default: false. Copy file metadata. Else strip all unneeded information.");
+   settings.set('Options', 'PNGAllowLossy', "false		; Boolean. Default: false. Allowing lossy optimizations will get higher files reduction at the cost of some quality loss, even if visually unnoticeable or not.");
+   settings.set('Options', 'TIFFCopyMetadata', "false		; Boolean. Default: false. Copy file metadata. Else strip all unneeded information.");
+   settings.set('Options', 'XMLEnableLeanify', "false		; Boolean. Default: false. Enable Leanify. Results in smaller files, but can happen they are not editable anymore.");
+   settings.set('Options', 'ZIPCopyMetadata', "true		; Boolean. Default: false. Copy file metadata. Else strip all unneeded information.");
+   settings.set('Options', 'ZIPRecurse', "false		; Boolean. Default: false. Enable optimization inside archives (recursive optimization).");
+   settings.set('Options', 'KeepAttributes', "true		; Boolean. Default: false. Keep original readonly, system, hidden and archive attributes as well as creation and modification timestamps.");
+   settings.set('Options', 'DoNotUseRecycleBin', "false		; Boolean. Default: false. When checked original files will not be backed up in the system trashcan.");
+   settings.set('Options', 'ExcludeMask', "		; String. Default: ''. Files containing this mask (substring) on name or path will be excluded from optimization. You can use semicolon to specify more than one substring being excluded.");
+   settings.set('Options', 'BeepWhenDone', "false		; Boolean. Default: false. Beep the speaker when optimization completes.");
+   settings.set('Options', 'Level', "9		; Number. Default: 5. Optimization level from best speed to best compression.");
+   settings.set('Options', 'ProcessPriority', "32		; Number. Default: 2 (Normal). Process priority from most conservative to best performance.");
+   settings.set('Options', 'LogLevel', "4		; Number. Default: 0. Debugging level to output on program log.");
+   settings.set('Options', 'FilenameFormat', "0		; Number. Default: 0. Specify the format to display filenames in the list.");
+   settings.set('Options', 'TempDirectory', "		; String. Default: ''. If not empty specified directory will be used for temporary storage instead of system's %TEMP%.");
+   settings.set('Options', 'DisablePluginMask', "		; String. Default: ''. Allow excluding execution of certain plugins. It is case insensitive, and allows more than one item to be specified by using semicolon as separator.");
+   settings.set('Options', 'EXEEnableUPX', "false		; Boolean. Default: false. Enable UPX executable compression. When enabled, UPX will be used, resulting EXE and DLL size reduction at the cost of runtime decompression.");
+   settings.set('Options', 'LeanifyIterations', "-1		; Number. Default: -1. If specified, number of trial iterations in all Leanify executions will use this value. If not, iterations are calculated depending on the Optimization level.");
+   settings.set('Options', 'JPEGAllowLossy', "false		; Boolean. Default: false. Allowing lossy optimizations will get higher files reduction at the cost of some quality loss, even if visually unnoticeable or not.");
+   settings.set('Options', 'GIFAllowLossy', "true		; Boolean. Default: false. Allowing lossy optimizations will get higher files reduction at the cost of some quality loss, even if visually unnoticeable or not.");
+   settings.set('Options', 'JSAdditionalExtensions', "		; String. Default: ''. Add extra extensions to be threated as JS/JSON.");
+   settings.set('Options', 'PDFSkipLayered', "false		; Boolean. Default: false. Skip processing of PDF files containing layered objects. Results in more compatible files with higher size.");
+   settings.set('Options', 'IncludeMask', "		; String. Default: ''. If not empty, only files containing this mask (substring) on name or path will be included from optimization. You can use semicolon to specify more than one substring being included.");
+   settings.set('Options', 'MP4CopyMetadata', "false		; Boolean. Default: false. Copy file metadata. Else strip all unneeded information.");
+   settings.set('Options', 'TGACopyMetadata', "false		; Boolean. Default: false. Copy file metadata. Else strip all unneeded information.");
+   settings.set('Options', 'WAVCopyMetadata', "false		; Boolean. Default: false. Copy file metadata. Else strip all unneeded information.");
+   settings.set('Options', 'WAVStripSilence', "false		; Boolean. Default: false. Strip start and end silences if any.");
+   settings.set('Options', 'DoNotCreateBackups', "true		; Boolean. Default: false. When checked original files will not be backed up in the current folder as a .BAK files.");
+   settings.set('Options', 'PNGWolfIterations', "-1		; Number. Default: -1. If specified, number of trial iterations in all PNGWolf executions will use this value. If not, iterations are calculated depending on the Optimization level.");
+   settings.set('Options', 'Debug', "false		; Boolean. Default: false. Enable internal debugging mode. Temporary files will not be deleted.");
+   settings.set('Options', 'MiscDisable', "false		; Boolean. Default: false. Disable processing of other file types. This could imply lossing some edit capabilities such as PSD/PSB where text layers will be rasterized.");
+   settings.set('Options', 'WEBPAllowLossy', "false		; Boolean. Default: false. Allowing lossy optimizations will get higher files reduction at the cost of some quality loss, even if visually unnoticeable or not.");
+   with open(settings_file,'w') as f:
+      settings.write(f);
 
 settings = RawConfigParser(allow_no_value=True);
-settings.read("settings.ini");
+# Search settings file in current path
+if os.path.exists("FileOptimizerPy.ini"):
+   settings_file = "FileOptimizerPy.ini";
+# Search settings file in home path
+elif os.path.exists(os.path.join(os.path.expanduser('~'), "FileOptimizerPy.ini")):
+   settings_file = os.path.join(os.path.expanduser('~'), "FileOptimizerPy.ini");
+# Search settings file of original FileOptimizer in home path
+elif os.path.exists(os.path.join(os.path.expanduser('~'), "FileOptimizer.ini")):
+   settings.read(os.path.join(os.path.expanduser('~'), "FileOptimizer.ini"));
+   settings.add_section('Paths');
+   settings.set('Paths','PluginsDirectory',r'C:\Program Files\FileOptimizer\Plugins64');
+   settings_file = os.path.join(os.path.expanduser('~'), "FileOptimizerPy.ini");
+   with open(settings_file,'w') as f:
+      settings.write(f);
+# Create settings file in home path
+else:
+   settings_file = os.path.join(os.path.expanduser('~'), "FileOptimizerPy.ini");
+   createSettings(settings_file);
+settings.read(settings_file);
 # ConfigParser can't split comment from option string
 s = dict(settings.items())
 ini = {x:{y:s[x][y].rsplit(";",1)[0].strip() for y in dict(s[x])} for x in s}
@@ -53,6 +132,24 @@ def GetShortName(psLongName):
       return psLongName;
 
 sPluginsDirectory = GetShortName(os.path.join(os.path.normpath(settings.get('Paths','PluginsDirectory')), ""))
+
+def SetCellFileValue(psValue):
+   FilenameFormat = settings.getint('Options','FilenameFormat');
+   # only filename
+   if FilenameFormat == 1:
+      sRes = os.path.basename(psValue);
+   # ToDo: driveletter + :\+partial path + filename
+   elif FilenameFormat == 2:
+      sRes = GetShortName(os.path.abspath(psValue));
+   # ToDo: driveletter + :\+partial path if fits+... last part of filename
+   elif FilenameFormat == 3:
+      sRes = GetShortName(os.path.abspath(psValue));
+      if len(sRes)>25:
+         sRes = sRes[:20].rsplit(os.sep,1)[0] + f'{os.sep} ... {os.sep}' + sRes[-20:].split(os.sep,1)[-1]
+   # full path+filename
+   else:
+      sRes = os.path.abspath(psValue);
+   return sRes;
 
 def GetFileAttributes(filename):
    try:
@@ -271,7 +368,7 @@ def RunPlugin(psStatus, psCommandLine, psInputFile, psOutputFile, piErrorMin, pi
       KI_GRID_OPTIMIZED = lSizeNew
 
    if not silentMode:
-      print(f"{GetShortName(sInputFile)} ", f" {Extension} ", f" {KI_GRID_ORIGINAL} ", f" {KI_GRID_OPTIMIZED} ", f" {KI_GRID_STATUS} ", sep="\t", end="\r");
+      print(f"{SetCellFileValue(sInputFile)} ", f" {Extension} ", f" {KI_GRID_ORIGINAL} ", f" {KI_GRID_OPTIMIZED} ", f" {KI_GRID_STATUS} ", sep="\t", end="\r");
    Log(3, f"Start: {time.strftime('%Y/%m/%d %H:%M:%S',time.localtime(dteStart))}\t" \
           f"End: {time.strftime('%Y/%m/%d %H:%M:%S',time.localtime(dteEnd))}\t" \
           f"Level: {settings.get('Options','Level')}\t" \
@@ -365,7 +462,7 @@ def IsPDFLayered(pacFile):
       bRes = True;
    return bRes;
 
-# Оптимизация файла
+# Single file optimisation
 def optimise(sInputFile, silentMode=False, res={}):
    basename = os.path.basename(sInputFile);
    KI_GRID_OPTIMIZED = KI_GRID_ORIGINAL = 0;
@@ -1412,7 +1509,7 @@ def optimise(sInputFile, silentMode=False, res={}):
       KI_GRID_STATUS = sCaption;
 
    if not silentMode:
-      print(f"{GetShortName(sInputFile)} ", f" {thisExt} ", f" {KI_GRID_ORIGINAL} ", f" {KI_GRID_OPTIMIZED} ", f" {KI_GRID_STATUS} ", sep="\t", end="\n");
+      print(f"{SetCellFileValue(sInputFile)} ", f" {thisExt} ", f" {KI_GRID_ORIGINAL} ", f" {KI_GRID_OPTIMIZED} ", f" {KI_GRID_STATUS} ", sep="\t", end="\n");
    res.update({"InputFile": os.path.abspath(sInputFile),
                "Extension": thisExt,
                "Original": KI_GRID_ORIGINAL,
@@ -1467,6 +1564,9 @@ class FileOptimiser:
             result_list.append(optimise(f"{elem}", silentMode=silentMode));
          return result_list;
 
+   def optimize(self, *args, **kwargs):
+      return self.optimise(*args, **kwargs);
+
    def optimise_parallel(self,silentMode=False,processes=4):
       result_list = [];
       process_list = [];
@@ -1501,7 +1601,13 @@ class FileOptimiser:
       for running_process in running_processes:
          running_process.join();
 
+      if settings.getboolean('Options','BeepWhenDone'):
+         print("\a");
+
       return list(map(dict,result_list));
+
+   def optimise_parallel(self, *args, **kwargs):
+      return self.optimise_parallel(*args, **kwargs);
 
    def filter(self,filter_func):
       self.files = filter(filter_func, list(self.files));
@@ -1509,14 +1615,10 @@ class FileOptimiser:
    def sort(self,sort_func, reverse=False):
       self.files = sorted(list(self.files), key=sort_func, reverse=reverse);
 
-if __name__ == '__main__':
-   parser = argparse.ArgumentParser();
-   parser.add_argument('input',nargs='*',help='input file');
-   parser.add_argument('-s','--silent', action='store_true', help='run without output print');
-   args = parser.parse_args();
-   deduped_input = []
-   for inputfile in args.input:
-      if inputfile not in deduped_input:
-         deduped_input.append(inputfile);
-   for inputfile in deduped_input:
-      optimiseDir(inputfile, silentMode=args.silent)
+# Synonyms with -ize
+def optimize(*args, **kwargs):
+   return optimise(*args, **kwargs);
+def optimizeDir(*args, **kwargs):
+   return optimiseDir(*args, **kwargs);
+class FileOptimizer(FileOptimiser):
+   pass;
