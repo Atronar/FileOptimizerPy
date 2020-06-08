@@ -27,14 +27,45 @@ __all__ = [
   "optimiseDir", "optimizeDir"
 ]
 
+def getPathPluginsRegistry():
+   try:
+      import winreg
+      with winreg.ConnectRegistry(None, winreg.HKEY_LOCAL_MACHINE) as areg:
+         try:
+            with winreg.OpenKey(areg, r'Software\Microsoft\Windows\CurrentVersion\Uninstall\FileOptimizer') as akey:
+               pathFO = winreg.QueryValueEx(akey, 'InstallDir')[0].strip("()");
+         except FileNotFoundError:
+            try:
+               with winreg.OpenKey(areg, r'SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\FileOptimizer') as akey:
+                  pathFO = winreg.QueryValueEx(akey, 'InstallDir')[0].strip("()");
+            except FileNotFoundError:
+               pathFO = r"C:\Program Files\FileOptimizer";
+   except:
+      pathFO = r"C:\Program Files\FileOptimizer";
+
+   if os.path.exists(pathFO):
+      if os.path.exists(os.path.join(pathFO,"Plugins32")):
+         pluginsDirectory = os.path.join(pathFO,"Plugins32");
+      elif os.path.exists(os.path.join(pathFO,"Plugins64")):
+         pluginsDirectory = os.path.join(pathFO,"Plugins64");
+      else:
+         return None;
+   else:
+      return None;
+   return pluginsDirectory;
+
 def createSettings(settings_file):
-   """Create a new settings file.
+   """Create a new settings file with default options.
 
    `settings_file` is a path string to this file.
    """
    settings = ConfigParser(allow_no_value=True);
    settings.add_section('Paths');
-   settings.set('Paths','PluginsDirectory',r'C:\Program Files\FileOptimizer\Plugins64');
+   pluginsDirectory = getPathPluginsRegistry();
+   if pluginsDirectory:
+      settings.set('Paths','PluginsDirectory',pluginsDirectory);
+   else:
+      settings.set('Paths','PluginsDirectory',r'C:\Program Files\FileOptimizer\Plugins64');
    settings.add_section('Options');
    settings.set('Options','BMPCopyMetadata', "false		; Boolean. Default: false. Copy file metadata. Else strip all unneeded information.");
    settings.set('Options', 'CSSEnableTidy', "false		; Boolean. Default: false. Enable tidy. Results in smaller files, but can happen they are not editable anymore.");
@@ -98,7 +129,11 @@ elif os.path.exists(os.path.join(os.path.expanduser('~'), "FileOptimizerPy.ini")
 elif os.path.exists(os.path.join(os.path.expanduser('~'), "FileOptimizer.ini")):
    settings.read(os.path.join(os.path.expanduser('~'), "FileOptimizer.ini"));
    settings.add_section('Paths');
-   settings.set('Paths','PluginsDirectory',r'C:\Program Files\FileOptimizer\Plugins64');
+   pluginsDirectory = getPathPluginsRegistry();
+   if pluginsDirectory:
+      settings.set('Paths','PluginsDirectory',pluginsDirectory);
+   else:
+      settings.set('Paths','PluginsDirectory',r'C:\Program Files\FileOptimizer\Plugins64');
    settings_file = os.path.join(os.path.expanduser('~'), "FileOptimizerPy.ini");
    with open(settings_file,'w') as f:
       settings.write(f);
