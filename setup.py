@@ -12,7 +12,7 @@ setup(
   python_requires='>=3.6',
   platforms = ["any"],
   packages = find_packages(),
-  install_requires = ["fleep"],
+  install_requires = ["fleep","send2trash"],
   include_package_data = True,
   classifiers = [
     "Development Status :: 5 - Production/Stable",
