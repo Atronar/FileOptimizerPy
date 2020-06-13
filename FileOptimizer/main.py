@@ -1697,7 +1697,10 @@ class FileOptimiser:
                for f in self.recursiveFilesFromDir(path):
                   yield f
          else:
-            yield filelist.resolve();
+            if hasattr(filelist,'resolve'):
+               yield filelist.resolve();
+            else:
+               yield os.path.abspath(filelist.path);
       elif isinstance(filelist, str):
          for f in self.recursiveFilesFromDir(pathlib.Path(filelist)):
             yield f
