@@ -119,15 +119,52 @@ def createSettings(settings_file):
       settings.write(f);
 
 settings = RawConfigParser(allow_no_value=True);
+
 # Search settings file in current path
 if os.path.exists("FileOptimizerPy.ini"):
    settings_file = "FileOptimizerPy.ini";
 # Search settings file in home path
 elif os.path.exists(os.path.join(os.path.expanduser('~'), "FileOptimizerPy.ini")):
    settings_file = os.path.join(os.path.expanduser('~'), "FileOptimizerPy.ini");
+# Search settings file of original FileOptimizer in FileOptimizer path
+elif os.path.exists(os.path.join(os.path.split(getPathPluginsRegistry())[0], "FileOptimizer.ini")):
+   pluginsDirectory = getPathPluginsRegistry();
+   settings.read(os.path.join(os.path.split(pluginsDirectory)[0], "FileOptimizer.ini"));
+   settings.add_section('Paths');
+   if pluginsDirectory:
+      settings.set('Paths','PluginsDirectory',pluginsDirectory);
+   else:
+      settings.set('Paths','PluginsDirectory',r'C:\Program Files\FileOptimizer\Plugins64');
+   settings_file = os.path.join(os.path.expanduser('~'), "FileOptimizerPy.ini");
+   with open(settings_file,'w') as f:
+      settings.write(f);
+# Search settings file of original FileOptimizer64 in FileOptimizer64 path
+elif os.path.exists(os.path.join(os.path.split(getPathPluginsRegistry())[0], "FileOptimizer64.ini")):
+   pluginsDirectory = getPathPluginsRegistry();
+   settings.read(os.path.join(os.path.split(pluginsDirectory)[0], "FileOptimizer64.ini"));
+   settings.add_section('Paths');
+   if pluginsDirectory:
+      settings.set('Paths','PluginsDirectory',pluginsDirectory);
+   else:
+      settings.set('Paths','PluginsDirectory',r'C:\Program Files\FileOptimizer\Plugins64');
+   settings_file = os.path.join(os.path.expanduser('~'), "FileOptimizerPy.ini");
+   with open(settings_file,'w') as f:
+      settings.write(f);
 # Search settings file of original FileOptimizer in home path
 elif os.path.exists(os.path.join(os.path.expanduser('~'), "FileOptimizer.ini")):
    settings.read(os.path.join(os.path.expanduser('~'), "FileOptimizer.ini"));
+   settings.add_section('Paths');
+   pluginsDirectory = getPathPluginsRegistry();
+   if pluginsDirectory:
+      settings.set('Paths','PluginsDirectory',pluginsDirectory);
+   else:
+      settings.set('Paths','PluginsDirectory',r'C:\Program Files\FileOptimizer\Plugins64');
+   settings_file = os.path.join(os.path.expanduser('~'), "FileOptimizerPy.ini");
+   with open(settings_file,'w') as f:
+      settings.write(f);
+# Search settings file of original FileOptimizer64 in home path
+elif os.path.exists(os.path.join(os.path.expanduser('~'), "FileOptimizer64.ini")):
+   settings.read(os.path.join(os.path.expanduser('~'), "FileOptimizer64.ini"));
    settings.add_section('Paths');
    pluginsDirectory = getPathPluginsRegistry();
    if pluginsDirectory:
@@ -141,6 +178,7 @@ elif os.path.exists(os.path.join(os.path.expanduser('~'), "FileOptimizer.ini")):
 else:
    settings_file = os.path.join(os.path.expanduser('~'), "FileOptimizerPy.ini");
    createSettings(settings_file);
+
 settings.read(settings_file);
 # ConfigParser can't split comment from option string
 s = dict(settings.items())
