@@ -1777,7 +1777,7 @@ class FileOptimiser:
 
       return list(map(dict,result_list));
 
-   def optimise_parallel(self, *args, **kwargs):
+   def optimize_parallel(self, *args, **kwargs):
       return self.optimise_parallel(*args, **kwargs);
 
    def filter(self,filter_func):
