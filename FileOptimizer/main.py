@@ -1,7 +1,7 @@
 '''
 Based on https://sourceforge.net/p/nikkhokkho/code/HEAD/tree/trunk/FileOptimizer/Source/cppMain.cpp
 and https://sourceforge.net/p/nikkhokkho/code/HEAD/tree/trunk/FileOptimizer/Source/clsUtil.cpp
-commit ver [r1562] 2020-05-30
+commit ver [r1570] 2020-08-02
 Author of original cpp code: Nikkho
 '''
 import os
@@ -938,7 +938,8 @@ def optimise(sInputFile, silentMode=False, res={}):
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
          '''
 
-         if settings.getboolean('Options','PNGCopyMetadata'):
+         # Temporary disable Leanify because it removed IPTC metadata
+         if not settings.getboolean('Options','PNGCopyMetadata'):
             sFlags = "";
             # iLevel = min(settings.getint('Options','Level') * 8 // 9, 8) + 1;
             # Overwrite Leanify iterations
@@ -947,11 +948,9 @@ def optimise(sInputFile, silentMode=False, res={}):
             else:
                iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
             sFlags += f"-i {iLevel} ";
-            # Temporary disable Leanify because it removed IPTC metadata
-            if not settings.getboolean('Options','PNGCopyMetadata'):
-               iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (2/2)",
-                         f"{sPluginsDirectory}leanify.exe -q {sFlags}\"%TMPINPUTFILE%\"",
-                         sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (2/2)",
+                      f"{sPluginsDirectory}leanify.exe -q {sFlags}\"%TMPINPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # JPEG: Guetzli, jpeg-recompress, jhead, Leanify, ect, pingo, jpegoptim, jpegtran, mozjpegtran
       if set(Extension) & set(KS_EXTENSION_JPG):
          thisExt = list(set(Extension) & set(KS_EXTENSION_JPG))[0];
@@ -981,9 +980,9 @@ def optimise(sInputFile, silentMode=False, res={}):
 
          sFlags = "";
          if settings.getboolean('Options','JPEGCopyMetadata'):
-            sFlags += "--keep-exif --keep-icc-profile --jpeg-keep-all-metadata ";
+            sFlags += "--keep-exif --keep-icc --jpeg-keep-all ";
          if settings.getboolean('Options','JPEGUseArithmeticEncoding'):
-            sFlags += "--jpeg-arithmetic-coding ";
+            sFlags += "--jpeg-arithmetic ";
          # iLevel = min(settings.getint('Options','Level') * 8 // 9, 8) + 1;
          # Overwrite Leanify iterations
          if settings.getint('Options','LeanifyIterations') != -1:
@@ -1448,6 +1447,22 @@ def optimise(sInputFile, silentMode=False, res={}):
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (1/1)",
                    f"{sPluginsDirectory}leanify.exe -q {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+      # Tencent QQ: Leanify
+      if set(Extension) & set(KS_EXTENSION_TENCENTQQ):
+         thisExt = list(set(Extension) & set(KS_EXTENSION_TENCENTQQ))[0];
+         if not settings.getboolean('Options','PNGCopyMetadata'):
+            sFlags = "";
+            # iLevel = min(settings.getint('Options','Level') * 8 // 9, 8) + 1;
+            # Overwrite Leanify iterations
+            if settings.getint('Options','LeanifyIterations') != -1:
+               iLevel = settings.getint('Options','LeanifyIterations');
+            else:
+               iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
+            sFlags += f"-i {iLevel} ";
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (1/1)",
+                      f"{sPluginsDirectory}leanify.exe -q {sFlags}\"%TMPINPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+
       # TGA: ImageMagick
       if set(Extension) & set(KS_EXTENSION_TGA):
          thisExt = list(set(Extension) & set(KS_EXTENSION_TGA))[0];
@@ -1596,6 +1611,7 @@ def optimise(sInputFile, silentMode=False, res={}):
          if not settings.getboolean('Options','ZIPRecurse') and (set(Extension) & {".zip"}):
             sFlags += "-d 1 ";
             # sFlags += "-f ";
+         sFlags += "--zip-deflate ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (1/6)",
                    f"{sPluginsDirectory}leanify.exe -q {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
