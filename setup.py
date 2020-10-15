@@ -5,7 +5,7 @@ setup(
   name = "FileOptimizerPy",
   description = "Python package and utility for files optimization",
   url = "https://github.com/Atronar/FileOptimizerPy",
-  version = "1.0",
+  version = "1.0.1580",
   author = "ATroN",
   author_email = "master.atron@gmail.com",
   license = "AGPLv3",
