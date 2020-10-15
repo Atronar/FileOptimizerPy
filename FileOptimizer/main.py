@@ -388,7 +388,13 @@ def RunPlugin(psStatus, psCommandLine, psInputFile, psOutputFile, piErrorMin, pi
    PluginMask = settings.get('Options','DisablePluginMask').upper().split(";");
    for Token in PluginMask:
       if Token and Token in psCommandLine.upper():
-         return 0;
+         KI_GRID_STATUS = "Skipped";
+         return 0, KI_GRID_OPTIMIZED, KI_GRID_STATUS;
+
+   if not os.path.exists(psInputFile):
+      KI_GRID_OPTIMIZED = 0;
+      KI_GRID_STATUS = "Skipped";
+      return 0, KI_GRID_OPTIMIZED, KI_GRID_STATUS;
 
    sInputFile = psInputFile;
    sOutputFile = psOutputFile;
@@ -475,7 +481,10 @@ def RunPlugin(psStatus, psCommandLine, psInputFile, psOutputFile, piErrorMin, pi
          if "%TMPOUTPUTFILE%" in psCommandLine:
             if not os.path.exists(sTmpOutputFile):
                sTmpOutputFile = f"{sTmpOutputFile}{Extension}"
-            lSizeNew = os.stat(sTmpOutputFile).st_size;
+            try:
+               lSizeNew = os.stat(sTmpOutputFile).st_size;
+            except FileNotFoundError:
+               lSizeNew = 0;
             if lSizeNew >= 8 and lSizeNew < lSize:
                shutil.copy2(sTmpOutputFile,presInputFile, follow_symlinks=False);
          elif ("%OUTPUTFILE%" not in psCommandLine) and ("%TMPOUTPUTFILE%" not in psCommandLine):
