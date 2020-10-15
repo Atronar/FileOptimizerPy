@@ -1,7 +1,7 @@
 '''
 Based on https://sourceforge.net/p/nikkhokkho/code/HEAD/tree/trunk/FileOptimizer/Source/cppMain.cpp
 and https://sourceforge.net/p/nikkhokkho/code/HEAD/tree/trunk/FileOptimizer/Source/clsUtil.cpp
-commit ver [r1570] 2020-08-02
+commit ver [r1580] 2020-09-15
 Author of original cpp code: Nikkho
 '''
 import os
@@ -1367,15 +1367,17 @@ def optimise(sInputFile, silentMode=False, res={}):
                    f"{sPluginsDirectory}ECT.exe -quiet --allfilters {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
+         sFlags = "";
+         iLevel = min(settings.getint('Options','Level') * 8 // 9, 8);
+         sFlags += f"-s{iLevel} ";
+
          if not settings.getboolean('Options','PNGCopyMetadata'):
-            sFlags = "";
-            iLevel = min(settings.getint('Options','Level') * 8 // 9, 8);
-            sFlags += f"-s{iLevel} ";
-            if settings.getboolean('Options','PNGAllowLossy'):
-               sFlags += "-x3 -lossyfilter ";
-            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("pingo (13/16)",
-                      f"{sPluginsDirectory}pingo.exe {sFlags}\"%TMPINPUTFILE%\"",
-                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+            sFlags += "-strip ";
+         if settings.getboolean('Options','PNGAllowLossy'):
+            sFlags += "-x3 -lossyfilter ";
+         iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("pingo (13/16)",
+                   f"{sPluginsDirectory}pingo.exe {sFlags}\"%TMPINPUTFILE%\"",
+                   sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
          if settings.getboolean('Options','PNGCopyMetadata'):
@@ -1574,7 +1576,9 @@ def optimise(sInputFile, silentMode=False, res={}):
          iLevel = min(settings.getint('Options','Level') * 8 // 9, 8);
          sFlags += f"-s{iLevel} ";
          if settings.getboolean('Options','WEBPAllowLossy'):
-            sFlags += "-auto ";
+            sFlags += "-webp ";
+         else:
+            sFlags += "-webp-lossless ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("pingo (1/3)",
                    f"{sPluginsDirectory}pingo.exe {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
