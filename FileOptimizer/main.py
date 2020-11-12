@@ -27,6 +27,13 @@ __all__ = [
   "optimiseDir", "optimizeDir"
 ]
 
+if sys.platform == "win32":
+   pluginExt = ".exe"
+   winePrefix = ""
+else:
+   pluginExt = ""
+   winePrefix = "wine "
+
 def getPathPluginsRegistry():
    try:
       import winreg
@@ -65,8 +72,12 @@ def createSettings(settings_file):
    if pluginsDirectory:
       settings.set('Paths','PluginsDirectory',pluginsDirectory);
    else:
-      settings.set('Paths','PluginsDirectory',r'C:\Program Files\FileOptimizer\Plugins64');
+      if sys.platform == "win32":
+         settings.set('Paths','PluginsDirectory',r'C:\Program Files\FileOptimizer\Plugins64');
+      else:
+         settings.set('Paths','PluginsDirectory',os.path.join(os.path.expanduser('~'),'FileOptimizerPlugins'));
    settings.add_section('Options');
+   settings.set('Options','ForceWine','false		; Force running Wine. UNIX-only option.');
    settings.set('Options','BMPCopyMetadata', "false		; Boolean. Default: false. Copy file metadata. Else strip all unneeded information.");
    settings.set('Options', 'CSSEnableTidy', "false		; Boolean. Default: false. Enable tidy. Results in smaller files, but can happen they are not editable anymore.");
    settings.set('Options', 'CSSTemplate', "low		; String. Default 'low'. Compression template, from safer and worse compression, to highest compression.");
@@ -114,7 +125,7 @@ def createSettings(settings_file):
    settings.set('Options', 'FilenameFormat', "0		; Number. Default: 0. Specify the format to display filenames in the list.");
    settings.set('Options', 'LeanifyIterations', "-1		; Number. Default: -1. If specified, number of trial iterations in all Leanify executions will use this value. If not, iterations are calculated depending on the Optimization level.");
    settings.set('Options', 'PNGWolfIterations', "-1		; Number. Default: -1. If specified, number of trial iterations in all PNGWolf executions will use this value. If not, iterations are calculated depending on the Optimization level.");
-   settings.set('Options', 'TempDirectory', "		; String. Default: ''. If not empty specified directory will be used for temporary storage instead of system's %TEMP%.");
+   settings.set('Options', 'TempDirectory', "		; String. Default: ''. If not empty specified directory will be used for temporary storage instead of system's %%TEMP%%.");
    with open(settings_file,'w') as f:
       settings.write(f);
 
@@ -127,7 +138,7 @@ if os.path.exists("FileOptimizerPy.ini"):
 elif os.path.exists(os.path.join(os.path.expanduser('~'), "FileOptimizerPy.ini")):
    settings_file = os.path.join(os.path.expanduser('~'), "FileOptimizerPy.ini");
 # Search settings file of original FileOptimizer in FileOptimizer path
-elif os.path.exists(os.path.join(os.path.split(getPathPluginsRegistry())[0], "FileOptimizer.ini")):
+elif getPathPluginsRegistry() and os.path.exists(os.path.join(os.path.split(getPathPluginsRegistry())[0], "FileOptimizer.ini")):
    pluginsDirectory = getPathPluginsRegistry();
    settings.read(os.path.join(os.path.split(pluginsDirectory)[0], "FileOptimizer.ini"));
    settings.add_section('Paths');
@@ -135,11 +146,12 @@ elif os.path.exists(os.path.join(os.path.split(getPathPluginsRegistry())[0], "Fi
       settings.set('Paths','PluginsDirectory',pluginsDirectory);
    else:
       settings.set('Paths','PluginsDirectory',r'C:\Program Files\FileOptimizer\Plugins64');
+   settings.set('Options','ForceWine','false		; Force running Wine. UNIX-only option.');
    settings_file = os.path.join(os.path.expanduser('~'), "FileOptimizerPy.ini");
    with open(settings_file,'w') as f:
       settings.write(f);
 # Search settings file of original FileOptimizer64 in FileOptimizer64 path
-elif os.path.exists(os.path.join(os.path.split(getPathPluginsRegistry())[0], "FileOptimizer64.ini")):
+elif getPathPluginsRegistry() and os.path.exists(os.path.join(os.path.split(getPathPluginsRegistry())[0], "FileOptimizer64.ini")):
    pluginsDirectory = getPathPluginsRegistry();
    settings.read(os.path.join(os.path.split(pluginsDirectory)[0], "FileOptimizer64.ini"));
    settings.add_section('Paths');
@@ -147,6 +159,7 @@ elif os.path.exists(os.path.join(os.path.split(getPathPluginsRegistry())[0], "Fi
       settings.set('Paths','PluginsDirectory',pluginsDirectory);
    else:
       settings.set('Paths','PluginsDirectory',r'C:\Program Files\FileOptimizer\Plugins64');
+   settings.set('Options','ForceWine','false		; Force running Wine. UNIX-only option.');
    settings_file = os.path.join(os.path.expanduser('~'), "FileOptimizerPy.ini");
    with open(settings_file,'w') as f:
       settings.write(f);
@@ -159,6 +172,7 @@ elif os.path.exists(os.path.join(os.path.expanduser('~'), "FileOptimizer.ini")):
       settings.set('Paths','PluginsDirectory',pluginsDirectory);
    else:
       settings.set('Paths','PluginsDirectory',r'C:\Program Files\FileOptimizer\Plugins64');
+   settings.set('Options','ForceWine','false		; Force running Wine. UNIX-only option.');
    settings_file = os.path.join(os.path.expanduser('~'), "FileOptimizerPy.ini");
    with open(settings_file,'w') as f:
       settings.write(f);
@@ -171,6 +185,7 @@ elif os.path.exists(os.path.join(os.path.expanduser('~'), "FileOptimizer64.ini")
       settings.set('Paths','PluginsDirectory',pluginsDirectory);
    else:
       settings.set('Paths','PluginsDirectory',r'C:\Program Files\FileOptimizer\Plugins64');
+   settings.set('Options','ForceWine','false		; Force running Wine. UNIX-only option.');
    settings_file = os.path.join(os.path.expanduser('~'), "FileOptimizerPy.ini");
    with open(settings_file,'w') as f:
       settings.write(f);
@@ -185,6 +200,11 @@ s = dict(settings.items())
 ini = {x:{y:s[x][y].rsplit(";",1)[0].strip() for y in dict(s[x])} for x in s}
 settings = ConfigParser(allow_no_value=True);
 settings.read_dict(ini);
+
+if sys.platform == "win32" or not settings.getboolean('Options','ForceWine'):
+   winePrefixForced = ""
+else:
+   winePrefixForced = "wine "
 
 # Получение короткого пути в Windows
 def GetShortName(psLongName):
@@ -326,7 +346,7 @@ def GetExtensionByContent(filename):
          Extension = mimetypes.guess_all_extensions(mime[0])
    # В крайнем случае берём расширение файла
    if not Extension:
-      Extension = os.path.splitext(filename)[-1]
+      Extension = os.path.splitext(filename)[-1].lower()
    # Запаковываем
    if isinstance(Extension, str):
       Extension = [Extension if Extension[0]=='.' else f".{Extension}"]
@@ -544,16 +564,33 @@ def RunProcess(pacProcess, pbWait):
 
    Returns exit code of process.
    '''
-   udtSI = subprocess.STARTUPINFO(dwFlags=subprocess.STARTF_USESHOWWINDOW,
-                                  wShowWindow=subprocess.SW_HIDE)
+   if sys.platform == "win32":
+      udtSI = subprocess.STARTUPINFO(
+                 dwFlags=subprocess.STARTF_USESHOWWINDOW,
+                 wShowWindow=subprocess.SW_HIDE
+              )
 
-   proc = subprocess.Popen(GetShortName(pacProcess),
-                           cwd=sPluginsDirectory,
-                           stdout=subprocess.DEVNULL,
-                           stderr=subprocess.DEVNULL,
-                           close_fds=not False,
-                           creationflags=settings.getint('Options','ProcessPriority'),
-                           startupinfo=udtSI)
+      proc = subprocess.Popen(
+                GetShortName(pacProcess),
+                cwd=sPluginsDirectory,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                close_fds=not False,
+                creationflags=settings.getint('Options','ProcessPriority'),
+                startupinfo=udtSI
+             )
+   else:
+      udtSI = None
+      proc = subprocess.Popen(
+                GetShortName(pacProcess),
+                cwd=sPluginsDirectory,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                close_fds=not False,
+                shell=True,
+                preexec_fn=lambda : os.nice(settings.getint('Options','ProcessPriority')),
+                startupinfo=udtSI
+             )
 
    if pbWait:
       lExitCode = proc.wait();
@@ -702,18 +739,23 @@ def optimise(sInputFile, silentMode=False, res={}):
          sFlags = "";
          if not settings.getboolean('Options','BMPCopyMetadata'):
             sFlags += "-strip ";
-         iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (1/2)",
-                   f"{sPluginsDirectory}magick.exe convert \"%INPUTFILE%\" -quiet -compress RLE {sFlags}\"%TMPOUTPUTFILE%\"",
-                   sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+         if sys.platform == "win32" or winePrefixForced:
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (1/2)",
+                      f"{winePrefixForced}{sPluginsDirectory}magick.exe convert \"%INPUTFILE%\" -quiet -compress RLE {sFlags}\"%TMPOUTPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+         else:
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (1/2)",
+                      f"{sPluginsDirectory}convert \"%INPUTFILE%\" -quiet -compress RLE {sFlags}\"%TMPOUTPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageWorsener (2/2)",
-                   f"{sPluginsDirectory}imagew.exe -noresize -zipcmprlevel 9 -outfmt bmp -compress \"rle\" \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}imagew{pluginExt} -noresize -zipcmprlevel 9 -outfmt bmp -compress \"rle\" \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # CSS: CSSTidy
       if set(Extension) & set(KS_EXTENSION_CSS):
          thisExt = list(set(Extension) & set(KS_EXTENSION_CSS))[0];
          if settings.getboolean('Options','CSSEnableTidy'):
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("CSSTidy (1/1)",
-                      f"{sPluginsDirectory}csstidy.exe \"%INPUTFILE%\" --template={settings.get('Options','CSSTemplate')} \"\"%TMPOUTPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}csstidy{pluginExt} \"%INPUTFILE%\" --template={settings.get('Options','CSSTemplate')} \"\"%TMPOUTPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
       # DLL: PETrim, strip, UPX
@@ -721,10 +763,10 @@ def optimise(sInputFile, silentMode=False, res={}):
          thisExt = list(set(Extension) & set(KS_EXTENSION_DLL))[0];
          if not settings.getboolean('Options','EXEDisablePETrim'):
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("PETrim (1/3)",
-                      f"{sPluginsDirectory}petrim.exe \"%TMPINPUTFILE%\"",
+                      f"{winePrefix}{sPluginsDirectory}petrim.exe \"%TMPINPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("strip (2/3)",
-                   f"{sPluginsDirectory}strip.exe --strip-all -o \"%TMPOUTPUTFILE%\" \"%INPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}strip{pluginExt} --strip-all -o \"%TMPOUTPUTFILE%\" \"%INPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
          if settings.getboolean('Options','EXEEnableUPX'):
             sFlags = "";
@@ -739,7 +781,7 @@ def optimise(sInputFile, silentMode=False, res={}):
             else:
                sFlags += "-9 --best --lzma --ultra-brute --crp-ms=999999 ";
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("UPX (3/3)",
-                      f"{sPluginsDirectory}upx.exe --no-backup --force {sFlags}\"%TMPINPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}upx{pluginExt} --no-backup --force {sFlags}\"%TMPINPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # EXE: Leanify, PETrim, strip, UPX
       if set(Extension) & set(KS_EXTENSION_EXE):
@@ -753,16 +795,16 @@ def optimise(sInputFile, silentMode=False, res={}):
             iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; #1, 1, 2, 3, 6, 9, 14, 21, 30
          sFlags += f"-i {iLevel} ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (1/4)",
-                   f"{sPluginsDirectory}leanify.exe -q {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          if not IsEXESFX(sInputFile):
             if not settings.getboolean('Options','EXEDisablePETrim'):
                iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("PETrim (2/4)",
-                         f"{sPluginsDirectory}petrim.exe /StripFixups:Y \"%TMPINPUTFILE%\"",
+                         f"{winePrefix}{sPluginsDirectory}petrim.exe /StripFixups:Y \"%TMPINPUTFILE%\"",
                          sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("strip (3/4)",
-                      f"{sPluginsDirectory}strip.exe --strip-all -o \"%TMPOUTPUTFILE%\" \"%INPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}strip{pluginExt} --strip-all -o \"%TMPOUTPUTFILE%\" \"%INPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
             if settings.getboolean('Options','EXEEnableUPX'):
                sFlags = "--no-backup --force ";
@@ -777,7 +819,7 @@ def optimise(sInputFile, silentMode=False, res={}):
                else:
                   sFlags += "-9 --best --lzma --ultra-brute --crp-ms=999999 ";
                iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("UPX (4/4)",
-                         f"{sPluginsDirectory}upx.exe {sFlags}\"%TMPINPUTFILE%\"",
+                         f"{winePrefixForced}{sPluginsDirectory}upx{pluginExt} {sFlags}\"%TMPINPUTFILE%\"",
                          sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # FLAC: FLAC, FLACOut
       if set(Extension) & set(KS_EXTENSION_FLAC):
@@ -789,7 +831,7 @@ def optimise(sInputFile, silentMode=False, res={}):
                sTmpOutputFile += "-stripped.flac";
 
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("shntool (1/4)",
-                      f"{sPluginsDirectory}shntool.exe strip -q -O always \"%INPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}shntool{pluginExt} strip -q -O always \"%INPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
             if os.path.exists(sTmpOutputFile) \
              and (os.stat(sTmpOutputFile).st_size > 0) \
@@ -805,7 +847,7 @@ def optimise(sInputFile, silentMode=False, res={}):
                   sTmpOutputFile += "-trimmed.flac";
 
                iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("shntool (2/4)",
-                         f"{sPluginsDirectory}shntool.exe trim -q -O always \"%INPUTFILE%\"",
+                         f"{winePrefixForced}{sPluginsDirectory}shntool{pluginExt} trim -q -O always \"%INPUTFILE%\"",
                          sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
                if os.path.exists(sTmpOutputFile) \
                 and (os.stat(sTmpOutputFile).st_size > 0) \
@@ -827,12 +869,12 @@ def optimise(sInputFile, silentMode=False, res={}):
          else:
             sFlags += "-8 --best -ep ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("FLAC (3/4)",
-                   f"{sPluginsDirectory}flac.exe --force -s {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}flac{pluginExt} --force -s {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          if settings.getint('Options','Level') >= 9:
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("FLACOut (4/4)",
-                      f"{sPluginsDirectory}flacout.exe /q /y \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                      f"{winePrefix}{sPluginsDirectory}flacout.exe /q /y \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # GIF: ImageMagick, gifsicle, flexiGIF
       if set(Extension) & set(KS_EXTENSION_GIF):
@@ -840,10 +882,16 @@ def optimise(sInputFile, silentMode=False, res={}):
          sFlags = "";
          if not settings.getboolean('Options','GIFCopyMetadata'):
             sFlags += "-strip ";
-         # iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick", f"{sPluginsDirectory}magick.exe convert \"%INPUTFILE%\" -quiet -layers optimize -compress LZW {sFlags}\"%TMPOUTPUTFILE%\"", sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
-         iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (1/2)",
-                   f"{sPluginsDirectory}magick.exe convert \"%INPUTFILE%\" -quiet -set dispose background -layers optimize -compress -loop 0 LZW {sFlags}\"%TMPOUTPUTFILE%\"",
-                   sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+         if sys.platform == "win32" or winePrefixForced:
+            # iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick", f"{winePrefixForced}{sPluginsDirectory}magick.exe convert \"%INPUTFILE%\" -quiet -layers optimize -compress LZW {sFlags}\"%TMPOUTPUTFILE%\"", sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (1/2)",
+                      f"{winePrefixForced}{sPluginsDirectory}magick.exe convert \"%INPUTFILE%\" -quiet -set dispose background -layers optimize -compress -loop 0 LZW {sFlags}\"%TMPOUTPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+         else:
+            # iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick", f"{winePrefixForced}{sPluginsDirectory}convert \"%INPUTFILE%\" -quiet -layers optimize -compress LZW {sFlags}\"%TMPOUTPUTFILE%\"", sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (1/2)",
+                      f"{sPluginsDirectory}convert \"%INPUTFILE%\" -quiet -set dispose background -layers optimize -compress -loop 0 LZW {sFlags}\"%TMPOUTPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
          # iLevel = min(settings.getint('Options','Level') * 3 // 9, 3);
@@ -854,21 +902,26 @@ def optimise(sInputFile, silentMode=False, res={}):
          if settings.getboolean('Options','GIFAllowLossy'):
             sFlags += "--lossy=85 ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("gifsicle (2/2)",
-                   f"{sPluginsDirectory}gifsicle.exe -w -j --no-conserve-memory -o \"%TMPOUTPUTFILE%\" {sFlags}\"%INPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}gifsicle{pluginExt} -w -j --no-conserve-memory -o \"%TMPOUTPUTFILE%\" {sFlags}\"%INPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          if not settings.getboolean('Options','GIFCopyMetadata'):
             sFlags = "";
             '''if settings.getint('Options','Level') >= 8:
                sFlags += "-p ";'''
-            # iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("flexiGIF (4/4)", f"{sPluginsDirectory}flexiGIF.exe -q {sFlags}\"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"", sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+            # iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("flexiGIF (4/4)", f"{winePrefixForced}{sPluginsDirectory}flexiGIF{pluginExt} -q {sFlags}\"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"", sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # GZ: Libdeflate, Leanify, ect, advdef, zRecompress, deflopt, defluff, deflopt
       if set(Extension) & set(KS_EXTENSION_GZ):
          thisExt = list(set(Extension) & set(KS_EXTENSION_GZ))[0];
          if not settings.getboolean('Options','GZCopyMetadata'):
-            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("libdeflate (1/8)",
-                      f"{sPluginsDirectory}libdeflate.bat \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
-                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+            if sys.platform == "win32" or winePrefixForced:
+               iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("libdeflate (1/8)",
+                         f"{winePrefixForced}{sPluginsDirectory}libdeflate.bat \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                         sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+            else:
+               iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("libdeflate (1/8)",
+                         f"{sPluginsDirectory}gzip -cd \"%INPUTFILE%\" | gzip -12 -f > \"%TMPOUTPUTFILE%\"",
+                         sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
             sFlags = "";
             # iLevel = min(settings.getint('Options','Level') * 8 // 9, 8) + 1;
@@ -881,7 +934,7 @@ def optimise(sInputFile, silentMode=False, res={}):
             if settings.getboolean('Options','GZCopyMetadata'):
                sFlags += "--keep-exif ";
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (2/8)",
-                      f"{sPluginsDirectory}leanify.exe -q {sFlags}\"%TMPINPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
@@ -889,10 +942,10 @@ def optimise(sInputFile, silentMode=False, res={}):
          iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
          sFlags += f"-i {iLevel} ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("advdef (3/8)",
-                   f"{sPluginsDirectory}advdef.exe -z -q -4 {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}advdef{pluginExt} -z -q -4 {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("zRecompress (4/8)",
-                   f"{sPluginsDirectory}zRecompress.exe -tgz \"%TMPINPUTFILE%\"",
+                   f"{winePrefix}{sPluginsDirectory}zRecompress.exe -tgz \"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
@@ -901,27 +954,32 @@ def optimise(sInputFile, silentMode=False, res={}):
          iLevel = min(settings.getint('Options','Level') * 8 // 9, 8) + 1;
          sFlags += f"-{iLevel} ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ECT (5/8)",
-                   f"{sPluginsDirectory}ECT.exe -quiet --allfilters -gzip {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}ECT{pluginExt} -quiet --allfilters -gzip {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
          if settings.getboolean('Options','GZCopyMetadata'):
             sFlags += "/c ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("DeflOpt (6/8)",
-                   f"{sPluginsDirectory}deflopt.exe /a /b /s {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefix}{sPluginsDirectory}deflopt.exe /a /b /s {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
-         iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("defluff (7/8)",
-                   f"{sPluginsDirectory}defluff.bat \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
-                   sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+         if sys.platform == "win32" or winePrefixForced: # defluff run from .bat
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("defluff (7/8)",
+                      f"{winePrefixForced}{sPluginsDirectory}defluff.bat \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+         else:
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("defluff (7/8)",
+                      f"{sPluginsDirectory}defluff <\"%INPUTFILE%\" >\"%TMPOUTPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("DeflOpt (8/8)",
-                   f"{sPluginsDirectory}deflopt.exe /a /b /s {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefix}{sPluginsDirectory}deflopt.exe /a /b /s {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # HTML: tidy-html5, Leanify
       if set(Extension) & set(KS_EXTENSION_HTML):
          thisExt = list(set(Extension) & set(KS_EXTENSION_HTML))[0];
          if settings.getboolean('Options','HTMLEnableTidy'):
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("tidy (1/2)",
-                      f"{sPluginsDirectory}tidy.exe -config tidy.config -quiet -output \"%TMPOUTPUTFILE%\" \"%INPUTFILE%\" ",
+                      f"{winePrefixForced}{sPluginsDirectory}tidy{pluginExt} -config tidy.config -quiet -output \"%TMPOUTPUTFILE%\" \"%INPUTFILE%\" ",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
             sFlags = "";
@@ -933,7 +991,7 @@ def optimise(sInputFile, silentMode=False, res={}):
                iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
             sFlags += f"-i {iLevel} ";
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (2/2)",
-                      f"{sPluginsDirectory}leanify.exe -q {sFlags}\"%TMPINPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # ICO: ImageMagick, Leanify
       if set(Extension) & set(KS_EXTENSION_ICO):
@@ -942,9 +1000,14 @@ def optimise(sInputFile, silentMode=False, res={}):
          sFlags = "";
          if not settings.getboolean('Options','PNGCopyMetadata'):
             sFlags += "-strip ";
-         iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (1/2)",
-                   f"{sPluginsDirectory}magick.exe convert \"%INPUTFILE%\" -quiet -compress ZIP {sFlags}\"%TMPOUTPUTFILE%\"",
-                   sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+         if sys.platform == "win32" or winePrefixForced:
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (1/2)",
+                      f"{winePrefixForced}{sPluginsDirectory}magick.exe convert \"%INPUTFILE%\" -quiet -compress ZIP {sFlags}\"%TMPOUTPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+         else:
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (1/2)",
+                      f"{sPluginsDirectory}convert \"%INPUTFILE%\" -quiet -compress ZIP {sFlags}\"%TMPOUTPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
          '''
 
          # Temporary disable Leanify because it removed IPTC metadata
@@ -958,14 +1021,14 @@ def optimise(sInputFile, silentMode=False, res={}):
                iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
             sFlags += f"-i {iLevel} ";
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (2/2)",
-                      f"{sPluginsDirectory}leanify.exe -q {sFlags}\"%TMPINPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # JPEG: Guetzli, jpeg-recompress, jhead, Leanify, ect, pingo, jpegoptim, jpegtran, mozjpegtran
       if set(Extension) & set(KS_EXTENSION_JPG):
          thisExt = list(set(Extension) & set(KS_EXTENSION_JPG))[0];
          if settings.getboolean('Options','JPEGAllowLossy') and not settings.getboolean('Options','JPEGCopyMetadata'):
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Guetzli (1/10)",
-                      f"{sPluginsDirectory}guetzli.exe --quality 90 {sFlags}\"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}guetzli{pluginExt} --quality 90 {sFlags}\"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          if settings.getboolean('Options','JPEGAllowLossy'):
@@ -975,7 +1038,7 @@ def optimise(sInputFile, silentMode=False, res={}):
             if settings.getint('Options','Level') >= 5:
                sFlags += "--accurate ";
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("jpeg-recompress (2/10)",
-                      f"{sPluginsDirectory}jpeg-recompress.exe --method smallfry --quality high --min 60 --subsample disable --quiet {sFlags}\"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}jpeg-recompress{pluginExt} --method smallfry --quality high --min 60 --subsample disable --quiet {sFlags}\"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
@@ -984,7 +1047,7 @@ def optimise(sInputFile, silentMode=False, res={}):
          else:
             sFlags += "-purejpg -di -dx -dt -zt ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("jhead (3/10)",
-                   f"{sPluginsDirectory}jhead.exe -q -autorot {sFlags} \"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}jhead{pluginExt} -q -autorot {sFlags} \"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
@@ -1000,7 +1063,7 @@ def optimise(sInputFile, silentMode=False, res={}):
             iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
          sFlags += f"-i {iLevel} ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (4/10)",
-                   f"{sPluginsDirectory}leanify.exe -q {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          if settings.getboolean('Options','JPEGAllowLossy'):
@@ -1008,15 +1071,20 @@ def optimise(sInputFile, silentMode=False, res={}):
             if not settings.getboolean('Options','JPEGCopyMetadata'):
                sFlags += "-strip ";
             # Seems to cause some loss of quality
-            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (5/10)",
-                      f"{sPluginsDirectory}magick.exe convert \"%INPUTFILE%\" -quiet -interlace Plane -define jpeg:optimize-coding=true {sFlags}\"%TMPOUTPUTFILE%\"",
-                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+            if sys.platform == "win32" or winePrefixForced:
+               iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (5/10)",
+                         f"{winePrefixForced}{sPluginsDirectory}magick.exe convert \"%INPUTFILE%\" -quiet -interlace Plane -define jpeg:optimize-coding=true {sFlags}\"%TMPOUTPUTFILE%\"",
+                         sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+            else:
+               iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (5/10)",
+                         f"{sPluginsDirectory}convert \"%INPUTFILE%\" -quiet -interlace Plane -define jpeg:optimize-coding=true {sFlags}\"%TMPOUTPUTFILE%\"",
+                         sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
          if not settings.getboolean('Options','JPEGCopyMetadata'):
             sFlags += "--strip-all ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("jpegoptim (6/10)",
-                   f"{sPluginsDirectory}jpegoptim.exe -o -q --all-progressive {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}jpegoptim{pluginExt} -o -q --all-progressive {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
@@ -1029,10 +1097,10 @@ def optimise(sInputFile, silentMode=False, res={}):
          else:
             sFlags += "-copy none ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("jpegtran (7/10)",
-                   f"{sPluginsDirectory}jpegtran.exe -progressive -optimize {sFlags}\"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}jpegtran{pluginExt} -progressive -optimize {sFlags} -outfile \"%TMPOUTPUTFILE%\" \"%INPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("mozjpegtran (8/10)",
-                   f"{sPluginsDirectory}mozjpegtran.exe -outfile \"%TMPOUTPUTFILE%\" -progressive -optimize -perfect {sFlags}\"%INPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}mozjpegtran{pluginExt} -outfile \"%TMPOUTPUTFILE%\" -progressive -optimize -perfect {sFlags}\"%INPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
@@ -1041,7 +1109,7 @@ def optimise(sInputFile, silentMode=False, res={}):
          iLevel = min(settings.getint('Options','Level') * 8 // 9, 8) + 1;
          sFlags += f"-{iLevel} ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ECT (9/10)",
-                   f"{sPluginsDirectory}ECT.exe -quiet --allfilters -progressive {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}ECT{pluginExt} -quiet --allfilters -progressive {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          if not settings.getboolean('Options','JPEGCopyMetadata'):
@@ -1053,14 +1121,14 @@ def optimise(sInputFile, silentMode=False, res={}):
             if settings.getboolean('Options','JPEGAllowLossy'):
                sFlags += "-x3 -lossy ";
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("pingo (10/10)",
-                      f"{sPluginsDirectory}pingo.exe -progressive {sFlags}\"%TMPINPUTFILE%\"",
+                      f"{winePrefix}{sPluginsDirectory}pingo.exe -progressive {sFlags}\"%TMPINPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # JS: jsmin
       if (set(Extension) & set(KS_EXTENSION_JS)) or (set(Extension) & set(settings.get('Options','JSAdditionalExtensions').replace(";", " ").split(" "))):
          # If JSMin is enabled or it is a custom extension (we assume custom extensions always enable it)
          if settings.getboolean('Options','JSEnableJSMin') or (set(Extension) & set(settings.get('Options','JSAdditionalExtensions').replace(";", " ").split(" "))):
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("jsmin (1/1)",
-                      f"{sPluginsDirectory}jsmin.bat \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                      f"python -m jsmin \"%INPUTFILE%\" >\"%TMPOUTPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # LUA: Leanify
       if set(Extension) & set(KS_EXTENSION_LUA):
@@ -1075,7 +1143,7 @@ def optimise(sInputFile, silentMode=False, res={}):
                iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
             sFlags += f"-i {iLevel} ";
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (1/1)",
-                      f"{sPluginsDirectory}leanify.exe -q {sFlags}\"%TMPINPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # MIME: Leanify
       if set(Extension) & set(KS_EXTENSION_MIME):
@@ -1089,7 +1157,7 @@ def optimise(sInputFile, silentMode=False, res={}):
             iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
          sFlags += f"-i {iLevel} ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (1/1)",
-                   f"{sPluginsDirectory}leanify.exe -q {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # MKV: ffmpeg, mkclean
       if set(Extension) & set(KS_EXTENSION_MKV):
@@ -1098,10 +1166,10 @@ def optimise(sInputFile, silentMode=False, res={}):
          if not settings.getboolean('Options','MP4CopyMetadata'):
             sFlags += "-map_metadata -1 ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ffmpeg (1/2)",
-                   f"{sPluginsDirectory}ffmpeg.exe -i \"%INPUTFILE%\" -vcodec copy -acodec copy -map 0 {sFlags}\"%TMPOUTPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}ffmpeg{pluginExt} -i \"%INPUTFILE%\" -vcodec copy -acodec copy -map 0 {sFlags}\"%TMPOUTPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("mkclean (2/2)",
-                   f"{sPluginsDirectory}mkclean.exe --optimize --unsafe --quiet \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}mkclean{pluginExt} --optimize --unsafe --quiet \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # MNG: advmng
       if set(Extension) & set(KS_EXTENSION_MNG):
@@ -1111,7 +1179,7 @@ def optimise(sInputFile, silentMode=False, res={}):
          iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
          sFlags += f"-i {iLevel} ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("advmng (1/1)",
-                   f"{sPluginsDirectory}advmng.exe -z -r -q -4 {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}advmng{pluginExt} -z -r -q -4 {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # MP3: MP3packer
       if set(Extension) & set(KS_EXTENSION_MP3):
@@ -1123,7 +1191,7 @@ def optimise(sInputFile, silentMode=False, res={}):
          iLevel = min(settings.getint('Options','Level') * 8 // 9, 8) + 1;
          sFlags += f"-{iLevel} ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ECT",
-                   f"{sPluginsDirectory}ECT.exe -quiet --allfilters --mt-deflate {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}ECT{pluginExt} -quiet --allfilters --mt-deflate {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
          '''
 
@@ -1131,7 +1199,7 @@ def optimise(sInputFile, silentMode=False, res={}):
          if not settings.getboolean('Options','MP3CopyMetadata'):
             sFlags += "-t -s ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("MP3packer (1/1)",
-                   f"{sPluginsDirectory}mp3packer.exe {sFlags}-z -a \"\" -A -f \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}mp3packer{pluginExt} {sFlags}-z -a \"\" -A -f \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # MP4: ffmpeg, mp4v2
       if set(Extension) & set(KS_EXTENSION_MP4):
@@ -1140,22 +1208,22 @@ def optimise(sInputFile, silentMode=False, res={}):
          if not settings.getboolean('Options','MP4CopyMetadata'):
             sFlags += "-map_metadata -1 ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ffmpeg (1/2)",
-                   f"{sPluginsDirectory}ffmpeg.exe -i \"%INPUTFILE%\" -vcodec copy -acodec copy -map 0 {sFlags}\"%TMPOUTPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}ffmpeg{pluginExt} -i \"%INPUTFILE%\" -vcodec copy -acodec copy -map 0 {sFlags}\"%TMPOUTPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("mp4v2 (2/2)",
-                   f"{sPluginsDirectory}mp4file.exe --optimize -q \"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}mp4file{pluginExt} --optimize -q \"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # OBJ: strip
       if set(Extension) & set(KS_EXTENSION_OBJ):
          thisExt = list(set(Extension) & set(KS_EXTENSION_OBJ))[0];
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("strip (1/1)",
-                   f"{sPluginsDirectory}strip.exe --strip-all -o \"%TMPOUTPUTFILE%\" \"%INPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}strip{pluginExt} --strip-all -o \"%TMPOUTPUTFILE%\" \"%INPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # OGG: rehuff
       if set(Extension) & set(KS_EXTENSION_OGG):
          thisExt = list(set(Extension) & set(KS_EXTENSION_OGG))[0];
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("rehuff (1/1)",
-                   f"{sPluginsDirectory}rehuff.exe \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}rehuff{pluginExt} \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # OGV: ffmpeg, rehuff_theora
       if set(Extension) & set(KS_EXTENSION_OGV):
@@ -1164,19 +1232,19 @@ def optimise(sInputFile, silentMode=False, res={}):
          if not settings.getboolean('Options','MP4CopyMetadata'):
             sFlags += "-map_metadata -1 ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ffmpeg (1/2)",
-                   f"{sPluginsDirectory}ffmpeg.exe -i \"%INPUTFILE%\" -vcodec copy -acodec copy -map 0 {sFlags}\"%TMPOUTPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}ffmpeg{pluginExt} -i \"%INPUTFILE%\" -vcodec copy -acodec copy -map 0 {sFlags}\"%TMPOUTPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("rehuff_theora (2/2)",
-                   f"{sPluginsDirectory}rehuff_theora.exe \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}rehuff_theora{pluginExt} \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # Microsoft OLE Compound Files: Document Press, Best CFBF
       if set(Extension) & set(KS_EXTENSION_OLE):
          thisExt = list(set(Extension) & set(KS_EXTENSION_OLE))[0];
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Document Press (1/2)",
-                   f"{sPluginsDirectory}docprc.exe -opt \"%TMPINPUTFILE%\"",
+                   f"{winePrefix}{sPluginsDirectory}docprc.exe -opt \"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Best CFBF (2/2)",
-                   f"{sPluginsDirectory}bestcfbf.exe \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\" -v4",
+                   f"{winePrefix}{sPluginsDirectory}bestcfbf.exe \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\" -v4",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # PCX: ImageMagick
       if set(Extension) & set(KS_EXTENSION_PCX):
@@ -1184,9 +1252,14 @@ def optimise(sInputFile, silentMode=False, res={}):
          sFlags = "";
          if not settings.getboolean('Options','PCXCopyMetadata'):
             sFlags += "-strip ";
-         iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (1/1)",
-                   f"{sPluginsDirectory}magick.exe convert \"%INPUTFILE%\" -quiet -compress RLE {sFlags}\"%TMPOUTPUTFILE%\"",
-                   sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+         if sys.platform == "win32" or winePrefixForced:
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (1/1)",
+                      f"{winePrefixForced}{sPluginsDirectory}magick.exe convert \"%INPUTFILE%\" -quiet -compress RLE {sFlags}\"%TMPOUTPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+         else:
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (1/1)",
+                      f"{sPluginsDirectory}convert \"%INPUTFILE%\" -quiet -compress RLE {sFlags}\"%TMPOUTPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # PDF: mutool, ghostcript, cpdfsqueeze
       if set(Extension) & set(KS_EXTENSION_PDF):
          thisExt = list(set(Extension) & set(KS_EXTENSION_PDF))[0];
@@ -1197,7 +1270,7 @@ def optimise(sInputFile, silentMode=False, res={}):
           or not settings.getboolean('Options','PDFSkipLayered') \
           or settings.get('Options','PDFProfile') == "none":
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("mutool (1/3)",
-                      f"{sPluginsDirectory}mutool.exe clean -ggg -z \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}mutool{pluginExt} clean -ggg -z \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
             # Do not use Ghoscript for Adobe Illustrator (AI) files
@@ -1215,29 +1288,33 @@ def optimise(sInputFile, silentMode=False, res={}):
 
                sFlags += "-dColorImageDownsampleType=/Bicubic -dGrayImageDownsampleType=/Bicubic -dMonoImageDownsampleType=/Bicubic -dOptimize=true -dConvertCMYKImagesToRGB=true -dColorConversionStrategy=/sRGB -dPrinted=false -q -dBATCH -dNOPAUSE -dSAFER -dDELAYSAFER -dNOPROMPT -sDEVICE=pdfwrite -dDetectDuplicateImages=true -dAutoRotatePages=/None -dCompatibilityLevel=1.4 ";
 
-               acTmpFilePdf = f"{os.path.splitext(sInputFile)[0]}.pdf";
+               acTmpFilePdf = f"{os.path.splitext(sInputFile)[0]}.tmp.pdf";
                acTmpFilePdf = GetShortName(acTmpFilePdf);
 
                # iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Ghostcript",
-               #          f"{sPluginsDirectory}cwebp.exe -mt -quiet -lossless {sFlags}\"{acTmpFileWebp}\" -o \"%INPUTFILE%\" -o \"{acTmpFileWebp}\"",
+               #          f"{winePrefixForced}{sPluginsDirectory}cwebp{pluginExt} -mt -quiet -lossless {sFlags}\"{acTmpFileWebp}\" -o \"%INPUTFILE%\" -o \"{acTmpFileWebp}\"",
                #          sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
-               if IsWindows64():
+               if IsWindows64() and (sys.platform == "win32" or winePrefixForced):
                   iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Ghostcript (2/3)",
-                            f"{sPluginsDirectory}gswin64c.exe {sFlags}-sOutputFile=\"{acTmpFilePdf}\" \"%INPUTFILE%\"",
+                            f"{winePrefixForced}{sPluginsDirectory}gswin64c.exe {sFlags}-sOutputFile=\"{acTmpFilePdf}\" \"%INPUTFILE%\"",
+                            sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+               elif sys.platform == "win32" or winePrefixForced:
+                  iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Ghostcript (2/3)",
+                            f"{winePrefixForced}{sPluginsDirectory}gswin32c.exe {sFlags}-sOutputFile=\"{acTmpFilePdf}\" \"%INPUTFILE%\"",
                             sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
                else:
                   iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Ghostcript (2/3)",
-                            f"{sPluginsDirectory}gswin32c.exe {sFlags}-sOutputFile=\"{acTmpFilePdf}\" \"%INPUTFILE%\"",
+                            f"{sPluginsDirectory}gs {sFlags}-sOutputFile=\"{acTmpFilePdf}\" \"%INPUTFILE%\"",
                             sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
                # If there is size reduction check it is not so high to detect corrupted encrypted PDF
-               if os.stat(acTmpFilePdf).st_size < os.stat(sInputFile).st_size:
+               if os.path.exists(acTmpFilePdf) and os.stat(acTmpFilePdf).st_size < os.stat(sInputFile).st_size:
                   if os.stat(acTmpFilePdf).st_size > 3000 and os.stat(sInputFile).st_size > 20000:
                      shutil.copy2(acTmpFilePdf, sInputFile, follow_symlinks=False);
-               if not settings.getboolean('Options','Debug'):
+               if os.path.exists(acTmpFilePdf) and not settings.getboolean('Options','Debug'):
                   os.remove(acTmpFilePdf);
 
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("cpdfsqueeze (3/3)",
-                      f"{sPluginsDirectory}cpdfsqueeze.exe \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}cpdfsqueeze{pluginExt} \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # PNG: apngopt, pngquant, PngOptimizer, TruePNG, pngout, optipng, pngwolf, Leanify, ect, pingo, advpng, deflopt, defluff, deflopt
       if set(Extension) & set(KS_EXTENSION_PNG):
@@ -1248,7 +1325,7 @@ def optimise(sInputFile, silentMode=False, res={}):
          # Android 9-patch images get broken with advpng, deflopt, optipng, pngoptimizer, pngout, pngrewrite and truepng. Only pngwolf, defluff and leanify seem to be safe. At the moment, detect them by extension .9.png.
          if bIsAPNG:
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("apngopt (1/16)",
-                      f"{sPluginsDirectory}apngopt.exe \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}apngopt.exe \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          if not bIsPNG9Patch:
@@ -1257,15 +1334,20 @@ def optimise(sInputFile, silentMode=False, res={}):
                if not settings.getboolean('Options','PNGCopyMetadata'):
                   sFlags += "--strip ";
                iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("pngquant (2/16)",
-                         f"{sPluginsDirectory}pngquant.exe {sFlags}--quality=85-95 --speed 1 --ext .png --force \"%TMPINPUTFILE%\"",
+                         f"{winePrefixForced}{sPluginsDirectory}pngquant.exe {sFlags}--quality=85-95 --speed 1 --ext .png --force \"%TMPINPUTFILE%\"",
                          sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
             sFlags = "";
             if settings.getboolean('Options','PNGCopyMetadata'):
                sFlags += "-KeepPhysicalPixelDimensions ";
-            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("PngOptimizer (3/16)",
-                      f"{sPluginsDirectory}PngOptimizer.exe {sFlags}-file:\"%TMPINPUTFILE%\"",
-                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+            if sys.platform == "win32" or winePrefixForced:
+               iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("PngOptimizer (3/16)",
+                         f"{winePrefixForced}{sPluginsDirectory}PngOptimizer.exe {sFlags}-file:\"%TMPINPUTFILE%\"",
+                         sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+            else:
+               iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("PngOptimizer (3/16)",
+                         f"{sPluginsDirectory}pngoptimizercl{pluginExt} {sFlags}-file:\"%TMPINPUTFILE%\"",
+                         sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          if not bIsAPNG and not bIsPNG9Patch:
             # Disable TruePNG on ICO files because it crashes
@@ -1280,7 +1362,7 @@ def optimise(sInputFile, silentMode=False, res={}):
                if settings.getboolean('Options','PNGAllowLossy'):
                   sFlags += "-l ";
                iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("TruePNG (4/16)",
-                         f"{sPluginsDirectory}truepng.exe {sFlags}/i0 /nc /tz /quiet /y /out \"%TMPOUTPUTFILE%\" \"%INPUTFILE%\"",
+                         f"{winePrefix}{sPluginsDirectory}TruePNG.exe {sFlags}/i0 /nc /tz /quiet /y /out \"%TMPOUTPUTFILE%\" \"%INPUTFILE%\"",
                          sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
             # Skip PNGOut when it is a JPEG renamed to PNG
@@ -1292,9 +1374,15 @@ def optimise(sInputFile, silentMode=False, res={}):
                   sFlags += "/kacTL,fcTL,fdAT ";
                iLevel = max((settings.getint('Options','Level') * 3 // 9) - 3, 0);
                sFlags += f"/s{iLevel} ";
-               iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("PNGOut (5/16)",
-                         f"{sPluginsDirectory}pngout.exe /q /y /r /d0 /mincodes0 {sFlags}\"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
-                         sInputFile, "", 0, 0, ErrorsList=(2,), Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+               if sys.platform == "win32" or winePrefixForced:
+                  iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("PNGOut (5/16)",
+                            f"{winePrefixForced}{sPluginsDirectory}pngout.exe /q /y /r /d0 /mincodes0 {sFlags}\"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                            sInputFile, "", 0, 0, ErrorsList=(2,), Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+               else:
+                  sFlags = sFlags.replace("/","-")
+                  iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("PNGOut (5/16)",
+                            f"{sPluginsDirectory}pngout{pluginExt} -q -y -r -d0 -mincodes0 {sFlags}\"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                            sInputFile, "", 0, 0, ErrorsList=(2,), Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
          iLevel = min(settings.getint('Options','Level') * 6 // 9, 6);
@@ -1302,13 +1390,13 @@ def optimise(sInputFile, silentMode=False, res={}):
          if bIsAPNG:
             # For some reason -strip all -protect acTL,fcTL,fdAT is not keeping APNG chunks
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("OptiPNG (6/16)",
-                      f"{sPluginsDirectory}optipng.exe -zw32k -protect acTL,fcTL,fdAT -quiet {sFlags}\"%TMPINPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}optipng{pluginExt} -zw32k -protect acTL,fcTL,fdAT -quiet {sFlags}\"%TMPINPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
          else:
             if not settings.getboolean('Options','PNGCopyMetadata'):
                sFlags += "-strip all ";
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("OptiPNG (7/16)",
-                      f"{sPluginsDirectory}optipng.exe -zw32k -quiet {sFlags}\"%TMPINPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}optipng{pluginExt} -zw32k -quiet {sFlags}\"%TMPINPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          if not bIsAPNG:
@@ -1323,7 +1411,7 @@ def optimise(sInputFile, silentMode=False, res={}):
             # Temporary disable Leanify because it removed IPTC metadata
             if not settings.getboolean('Options','PNGCopyMetadata'):
                iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (8/16)",
-                         f"{sPluginsDirectory}leanify.exe -q {sFlags}\"%TMPINPUTFILE%\"",
+                         f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
                          sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
             sFlags = "";
@@ -1334,16 +1422,16 @@ def optimise(sInputFile, silentMode=False, res={}):
                iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
             sFlags += f"--out-deflate=zopfli,iter={iLevel} ";
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("pngwolf (9/16)",
-                      f"{sPluginsDirectory}pngwolf.exe {sFlags}--in=\"%INPUTFILE%\" --out=\"%TMPOUTPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}pngwolf{pluginExt} {sFlags}--in=\"%INPUTFILE%\" --out=\"%TMPOUTPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
             if not bIsPNG9Patch:
                iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("pngrewrite (10/16)",
-                         f"{sPluginsDirectory}pngrewrite.exe \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                         f"{winePrefixForced}{sPluginsDirectory}pngrewrite{pluginExt} \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
                          sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
                # iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageWorsener",
-               #                    f"{sPluginsDirectory}imagew.exe -noresize -zipcmprlevel 9 \"" + grdFiles->Cells[0][iCount] + "\" \"{acTmpFile}\"",
+               #                    f"{winePrefixForced}{sPluginsDirectory}imagew{pluginExt} -noresize -zipcmprlevel 9 \"" + grdFiles->Cells[0][iCount] + "\" \"{acTmpFile}\"",
                #                    acPluginsDirectory, acTmpFile);
 
                sFlags = "";
@@ -1352,7 +1440,7 @@ def optimise(sInputFile, silentMode=False, res={}):
                sFlags += f"-i {iLevel} ";
                if not settings.getboolean('Options','PNGCopyMetadata'):
                   iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("advpng (11/16)",
-                            f"{sPluginsDirectory}advpng.exe -z -q -4 {sFlags}\"%TMPINPUTFILE%\"",
+                            f"{winePrefixForced}{sPluginsDirectory}advpng{pluginExt} -z -q -4 {sFlags}\"%TMPINPUTFILE%\"",
                             sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
@@ -1364,7 +1452,7 @@ def optimise(sInputFile, silentMode=False, res={}):
          iLevel = min(settings.getint('Options','Level') * 8 // 9, 8) + 1;
          sFlags += f"-{iLevel} ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ECT (12/16)",
-                   f"{sPluginsDirectory}ECT.exe -quiet --allfilters {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}ECT{pluginExt} -quiet --allfilters {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
@@ -1376,7 +1464,7 @@ def optimise(sInputFile, silentMode=False, res={}):
          if settings.getboolean('Options','PNGAllowLossy'):
             sFlags += "-x3 -lossyfilter ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("pingo (13/16)",
-                   f"{sPluginsDirectory}pingo.exe {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefix}{sPluginsDirectory}pingo.exe {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
@@ -1385,36 +1473,42 @@ def optimise(sInputFile, silentMode=False, res={}):
 
          if not bIsAPNG and not bIsPNG9Patch:
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("DeflOpt (14/16)",
-                      f"{sPluginsDirectory}deflopt.exe /a /b /s {sFlags}\"%TMPINPUTFILE%\"",
+                      f"{winePrefix}{sPluginsDirectory}deflopt.exe /a /b /s {sFlags}\"%TMPINPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
-         iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("defluff (15/16)",
-                   f"{sPluginsDirectory}defluff.bat \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
-                   sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+         if sys.platform == "win32" or winePrefixForced: # defluff run from .bat
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("defluff (15/16)",
+                      f"{winePrefixForced}{sPluginsDirectory}defluff.bat \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+         else:
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("defluff (15/16)",
+                      f"{sPluginsDirectory}defluff <\"%INPUTFILE%\" >\"%TMPOUTPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          if not bIsAPNG and not bIsPNG9Patch:
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("DeflOpt (16/16)",
-                      f"{sPluginsDirectory}deflopt.exe /a /b /s {sFlags}\"%TMPINPUTFILE%\"",
+                      f"{winePrefix}{sPluginsDirectory}deflopt.exe /a /b /s {sFlags}\"%TMPINPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+
 
       # SWF: Leanfy, flasm, zRecompress
       if set(Extension) & set(KS_EXTENSION_SWF):
          thisExt = list(set(Extension) & set(KS_EXTENSION_SWF))[0];
          sTmpOutputFile = sInputFile.replace(".swf", ".$wf");
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("flasm (1/5)",
-                   f"{sPluginsDirectory}flasm.exe -x \"%INPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}flasm{pluginExt} -x \"%INPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
          shutil.copy2(sTmpOutputFile, sInputFile, follow_symlinks=False);
          os.remove(sTmpOutputFile);
 
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("flasm (2/5)",
-                   f"{sPluginsDirectory}flasm.exe -u \"%INPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}flasm{pluginExt} -u \"%INPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
          shutil.copy2(sTmpOutputFile, sInputFile, follow_symlinks=False);
          os.remove(sInputFile.replace(".swf", ".$wf"));
 
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("flasm (3/5)",
-                   f"{sPluginsDirectory}flasm.exe -z \"%INPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}flasm{pluginExt} -z \"%INPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
          if os.stat(sTmpOutputFile).st_size < KI_GRID_OPTIMIZED:
             shutil.copy2(sTmpOutputFile, sInputFile, follow_symlinks=False);
@@ -1422,7 +1516,7 @@ def optimise(sInputFile, silentMode=False, res={}):
          os.remove(sInputFile.replace(".swf", ".$wf"));
 
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("zRecompress (4/5)",
-                   f"{sPluginsDirectory}zRecompress.exe -tswf-lzma \"%TMPINPUTFILE%\"",
+                   f"{winePrefix}{sPluginsDirectory}zRecompress.exe -tswf-lzma \"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
@@ -1434,14 +1528,19 @@ def optimise(sInputFile, silentMode=False, res={}):
             iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
          sFlags += f"-i {iLevel} ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (5/5)",
-                   f"{sPluginsDirectory}leanify.exe -q {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # SQLITE: sqlite
       if set(Extension) & set(KS_EXTENSION_SQLITE):
          thisExt = list(set(Extension) & set(KS_EXTENSION_SQLITE))[0];
-         iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("sqlite (1/1)",
-                   f"{sPluginsDirectory}sqlite.bat \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
-                   sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+         if sys.platform == "win32" or winePrefixForced:
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("sqlite (1/1)",
+                      f"{winePrefixForced}{sPluginsDirectory}sqlite.bat \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+         else:
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("sqlite (1/1)",
+                      f"{sPluginsDirectory}sqlite.sh \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\" > /dev/null",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # TAR: Leanify
       if set(Extension) & set(KS_EXTENSION_TAR):
          thisExt = list(set(Extension) & set(KS_EXTENSION_TAR))[0];
@@ -1456,7 +1555,7 @@ def optimise(sInputFile, silentMode=False, res={}):
             iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
          sFlags += f"-i {iLevel} ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (1/1)",
-                   f"{sPluginsDirectory}leanify.exe -q {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # Tencent QQ: Leanify
       if set(Extension) & set(KS_EXTENSION_TENCENTQQ):
@@ -1471,7 +1570,7 @@ def optimise(sInputFile, silentMode=False, res={}):
                iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
             sFlags += f"-i {iLevel} ";
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (1/1)",
-                      f"{sPluginsDirectory}leanify.exe -q {sFlags}\"%TMPINPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
       # TGA: ImageMagick
@@ -1480,9 +1579,14 @@ def optimise(sInputFile, silentMode=False, res={}):
          sFlags = "";
          if not settings.getboolean('Options','TGACopyMetadata'):
             sFlags += "-strip ";
-         iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (1/1)",
-                   f"{sPluginsDirectory}magick.exe convert -quiet -compress RLE {sFlags}\"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
-                   sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+         if sys.platform == "win32" or winePrefixForced:
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (1/1)",
+                      f"{winePrefixForced}{sPluginsDirectory}magick.exe convert -quiet -compress RLE {sFlags}\"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+         else:
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (1/1)",
+                      f"{sPluginsDirectory}convert -quiet -compress RLE {sFlags}\"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # TIFF: jhead, ImageMagick, jpegoptim, jpegtran, mozjpegtran
       if set(Extension) & set(KS_EXTENSION_TIFF):
          thisExt = list(set(Extension) & set(KS_EXTENSION_TIFF))[0];
@@ -1492,20 +1596,25 @@ def optimise(sInputFile, silentMode=False, res={}):
          else:
             sFlags += "-purejpg -di -dx -dt -zt ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("jhead (1/5)",
-                   f"{sPluginsDirectory}jhead.exe -q -autorot {sFlags} \"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}jhead{pluginExt} -q -autorot {sFlags} \"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          # ImageMagick does not keep metadata on TIFF images so disable it
          if not settings.getboolean('Options','TIFFCopyMetadata'):
-            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (2/5)",
-                      f"{sPluginsDirectory}magick.exe convert \"%INPUTFILE%\" -quiet -compress ZIP -strip \"%TMPOUTPUTFILE%\"",
-                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+            if sys.platform == "win32" or winePrefixForced:
+               iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (2/5)",
+                         f"{winePrefixForced}{sPluginsDirectory}magick.exe convert \"%INPUTFILE%\" -quiet -compress ZIP -strip \"%TMPOUTPUTFILE%\"",
+                         sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+            else:
+               iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (2/5)",
+                         f"{sPluginsDirectory}convert \"%INPUTFILE%\" -quiet -compress ZIP -strip \"%TMPOUTPUTFILE%\"",
+                         sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
          if not settings.getboolean('Options','TIFFCopyMetadata'):
             sFlags += "--strip-all ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("jpegoptim (3/5)",
-                   f"{sPluginsDirectory}jpegoptim.exe -o -q --all-progressive {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}jpegoptim{pluginExt} -o -q --all-progressive {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
@@ -1518,10 +1627,10 @@ def optimise(sInputFile, silentMode=False, res={}):
          else:
             sFlags += "-copy none ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("jpegtran (4/5)",
-                   f"{sPluginsDirectory}jpegtran.exe -progressive -optimize {sFlags}\"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}jpegtran{pluginExt} -progressive -optimize {sFlags}\"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("mozjpegtran (5/5)",
-                   f"{sPluginsDirectory}mozjpegtran.exe -outfile \"%TMPOUTPUTFILE%\" -progressive -optimize -perfect {sFlags}\"%INPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}mozjpegtran{pluginExt} -outfile \"%TMPOUTPUTFILE%\" -progressive -optimize -perfect {sFlags}\"%INPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # WAV: shntool
       if set(Extension) & set(KS_EXTENSION_WAV):
@@ -1533,7 +1642,7 @@ def optimise(sInputFile, silentMode=False, res={}):
                sTmpOutputFile += "-stripped.wav";
 
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("shntool (1/2)",
-                      f"{sPluginsDirectory}shntool.exe strip -q -O always \"%INPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}shntool{pluginExt} strip -q -O always \"%INPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
             if os.stat(sTmpOutputFile).st_size > 0 and os.stat(sTmpOutputFile).st_size < KI_GRID_OPTIMIZED:
                shutil.copy2(sTmpOutputFile, sInputFile, follow_symlinks=False);
@@ -1547,7 +1656,7 @@ def optimise(sInputFile, silentMode=False, res={}):
                   sTmpOutputFile += "-trimmed.wav";
 
                iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("shntool (2/2)",
-                         f"{sPluginsDirectory}shntool.exe trim -q -O always \"%INPUTFILE%\"",
+                         f"{winePrefixForced}{sPluginsDirectory}shntool{pluginExt} trim -q -O always \"%INPUTFILE%\"",
                          sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
                if os.stat(sTmpOutputFile).st_size > 0 and os.stat(sTmpOutputFile).st_size < KI_GRID_OPTIMIZED:
                   shutil.copy2(sTmpOutputFile, sInputFile, follow_symlinks=False);
@@ -1567,7 +1676,7 @@ def optimise(sInputFile, silentMode=False, res={}):
                iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
             sFlags += f"-i {iLevel} ";
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (1/1)",
-                      f"{sPluginsDirectory}leanify.exe -q {sFlags}\"%TMPINPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # WEBP: pingo, dwebp + cwebp, ImageWorsener
       if set(Extension) & set(KS_EXTENSION_WEBP):
@@ -1580,7 +1689,7 @@ def optimise(sInputFile, silentMode=False, res={}):
          else:
             sFlags += "-webp-lossless ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("pingo (1/3)",
-                   f"{sPluginsDirectory}pingo.exe {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefix}{sPluginsDirectory}pingo.exe {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
@@ -1591,11 +1700,11 @@ def optimise(sInputFile, silentMode=False, res={}):
          acTmpFileWebp = GetShortName(acTmpFileWebp);
 
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("dwebp (2/3)",
-                      f"{sPluginsDirectory}dwebp.exe -mt \"%INPUTFILE%\" -o \"{acTmpFileWebp}\"",
+                      f"{winePrefixForced}{sPluginsDirectory}dwebp{pluginExt} -mt \"%INPUTFILE%\" -o \"{acTmpFileWebp}\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
          if iError == 0:
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("cwebp (3/3)",
-                      f"{sPluginsDirectory}cwebp.exe -mt -quiet -lossless {sFlags}\"{acTmpFileWebp}\" -o \"%INPUTFILE%\" -o \"{acTmpFileWebp}\"",
+                      f"{winePrefixForced}{sPluginsDirectory}cwebp{pluginExt} -mt -quiet -lossless {sFlags}\"{acTmpFileWebp}\" -o \"%INPUTFILE%\" -o \"{acTmpFileWebp}\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
             if os.stat(acTmpFileWebp).st_size < os.stat(sInputFile).st_size:
                shutil.copy2(acTmpFileWebp, sInputFile, follow_symlinks=False);
@@ -1603,7 +1712,7 @@ def optimise(sInputFile, silentMode=False, res={}):
             os.remove(acTmpFileWebp);
 
          # iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageWorsener",
-         #           f"{sPluginsDirectory}imagew.exe -noresize -zipcmprlevel 9 \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+         #           f"{winePrefixForced}{sPluginsDirectory}imagew{pluginExt} -noresize -zipcmprlevel 9 \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
          #           sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # ZIP: Leanify, ect, advzip, deflopt, defluff, deflopt
       if set(Extension) & set(KS_EXTENSION_ZIP):
@@ -1626,7 +1735,7 @@ def optimise(sInputFile, silentMode=False, res={}):
             # sFlags += "-f ";
          sFlags += "--zip-deflate ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (1/6)",
-                   f"{sPluginsDirectory}leanify.exe -q {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
@@ -1635,7 +1744,7 @@ def optimise(sInputFile, silentMode=False, res={}):
          iLevel = min(settings.getint('Options','Level') * 8 // 9, 8) + 1;
          sFlags += f"-{iLevel} ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ECT (2/6)",
-                   f"{sPluginsDirectory}ECT.exe -quiet -zip {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}ECT{pluginExt} -quiet -zip {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          # AdvZip strips header on ZIP files
@@ -1645,20 +1754,25 @@ def optimise(sInputFile, silentMode=False, res={}):
             iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
             sFlags += f"-i {iLevel} ";
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("advzip (3/6)",
-                      f"{sPluginsDirectory}advzip.exe -z -q -4 {sFlags}\"%TMPINPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}advzip.exe -z -q -4 {sFlags}\"%TMPINPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
          if settings.getboolean('Options','ZIPCopyMetadata'):
             sFlags += "/c ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("DeflOpt (4/6)",
-                   f"{sPluginsDirectory}deflopt.exe /a /b /s {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefix}{sPluginsDirectory}deflopt.exe /a /b /s {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
-         iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("defluff (5/6)",
-                   f"{sPluginsDirectory}defluff.bat \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
-                   sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+         if sys.platform == "win32" or winePrefixForced: # defluff run from .bat
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("defluff (5/6)",
+                      f"{winePrefixForced}{sPluginsDirectory}defluff.bat \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+         else:
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("defluff (5/6)",
+                      f"{sPluginsDirectory}defluff <\"%INPUTFILE%\" >\"%TMPOUTPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("DeflOpt (6/6)",
-                   f"{sPluginsDirectory}deflopt.exe /a /b /s {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefix}{sPluginsDirectory}deflopt.exe /a /b /s {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # 7Z: m7zRepacker
       if set(Extension) & set(KS_EXTENSION_7Z):
@@ -1667,11 +1781,11 @@ def optimise(sInputFile, silentMode=False, res={}):
          if settings.getint('Options','Level') > 7:
             if IsWindows64():
                iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("m7zRepacker (1/1)",
-                         f"{sPluginsDirectory}m7zrepacker.exe -m1 -d1024 -mem2048 \"%TMPINPUTFILE%\"",
+                         f"{winePrefix}{sPluginsDirectory}m7zrepacker.exe -m1 -d1024 -mem2048 \"%TMPINPUTFILE%\"",
                          sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
             else:
                iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("m7zRepacker (1/1)",
-                         f"{sPluginsDirectory}m7zrepacker.exe -m1 -d128 -mem512 \"%TMPINPUTFILE%\"",
+                         f"{winePrefix}{sPluginsDirectory}m7zrepacker.exe -m1 -d128 -mem512 \"%TMPINPUTFILE%\"",
                          sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # MISC: ImageMagick
       if set(Extension) & set(KS_EXTENSION_MISC):
@@ -1680,9 +1794,14 @@ def optimise(sInputFile, silentMode=False, res={}):
             sFlags = "";
             if not settings.getboolean('Options','MiscCopyMetadata'):
                sFlags += "-strip ";
-            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (1/1)",
-                      f"{sPluginsDirectory}magick.exe convert \"%INPUTFILE%\" -quiet {sFlags}\"%TMPOUTPUTFILE%\"",
-                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+            if sys.platform == "win32" or winePrefixForced:
+               iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (1/1)",
+                         f"{winePrefixForced}{sPluginsDirectory}magick.exe convert \"%INPUTFILE%\" -quiet {sFlags}\"%TMPOUTPUTFILE%\"",
+                         sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+            else:
+               iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (1/1)",
+                         f"{sPluginsDirectory}convert \"%INPUTFILE%\" -quiet {sFlags}\"%TMPOUTPUTFILE%\"",
+                         sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
       if settings.getboolean('Options','KeepAttributes'):
          # Restore timestamp if we were able to get it
@@ -1823,7 +1942,7 @@ class FileOptimiser:
                                                     )
                             );
          result_list.append(res);
-      
+
       next_process = 0;
       closed_processes_count = 0;
       while next_process<len(process_list):
@@ -1851,7 +1970,7 @@ class FileOptimiser:
       return self.optimise_parallel(*args, **kwargs);
 
    def filter(self,filter_func):
-      '''Filtering files which True in funnction. 
+      '''Filtering files which True in funnction.
       '''
       self.files = filter(filter_func, list(self.files));
 
