@@ -14,6 +14,10 @@ Required plugins from original utility:
 ## How to install
 
     $ pip3 install FileOptimizerPy
+
+See `install-plugins.sh` for building and installing plugins to Linux,
+or copy plugins from the [original FileOptimiser](https://nikkhokkho.sourceforge.io/static.php?page=FileOptimizer) and set `forceWine = true` in settings (~/FileOptimizerPy.ini),
+or just try use [this prebuilted plugins for Ubuntu](https://github.com/Atronar/FileOptimizerPy-UbuntuPlugins).
  
 ## Checking documentation
 
