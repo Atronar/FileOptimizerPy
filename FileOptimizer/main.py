@@ -1,7 +1,7 @@
 '''
 Based on https://sourceforge.net/p/nikkhokkho/code/HEAD/tree/trunk/FileOptimizer/Source/cppMain.cpp
 and https://sourceforge.net/p/nikkhokkho/code/HEAD/tree/trunk/FileOptimizer/Source/clsUtil.cpp
-commit ver [r1580] 2020-09-15
+commit ver [r1613] 2021-03-19
 Author of original cpp code: Nikkho
 '''
 import os
@@ -750,14 +750,17 @@ def optimise(sInputFile, silentMode=False, res={}):
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageWorsener (2/2)",
                    f"{winePrefixForced}{sPluginsDirectory}imagew{pluginExt} -noresize -zipcmprlevel 9 -outfmt bmp -compress \"rle\" \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
-      # CSS: CSSTidy
+      # CSS: CSSTidy, Minify
       if set(Extension) & set(KS_EXTENSION_CSS):
          thisExt = list(set(Extension) & set(KS_EXTENSION_CSS))[0];
          if settings.getboolean('Options','CSSEnableTidy'):
-            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("CSSTidy (1/1)",
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("CSSTidy (1/2)",
                       f"{winePrefixForced}{sPluginsDirectory}csstidy{pluginExt} \"%INPUTFILE%\" --template={settings.get('Options','CSSTemplate')} \"\"%TMPOUTPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Minify (2/2)",
+                      f"{winePrefixForced}{sPluginsDirectory}minify.exe \"%INPUTFILE%\" --output \"%TMPOUTPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # DLL: PETrim, strip, UPX
       if set(Extension) & set(KS_EXTENSION_DLL):
          thisExt = list(set(Extension) & set(KS_EXTENSION_DLL))[0];
@@ -795,7 +798,7 @@ def optimise(sInputFile, silentMode=False, res={}):
             iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; #1, 1, 2, 3, 6, 9, 14, 21, 30
          sFlags += f"-i {iLevel} ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (1/4)",
-                   f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q -p {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          if not IsEXESFX(sInputFile):
@@ -934,7 +937,7 @@ def optimise(sInputFile, silentMode=False, res={}):
             if settings.getboolean('Options','GZCopyMetadata'):
                sFlags += "--keep-exif ";
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (2/8)",
-                      f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q -p {sFlags}\"%TMPINPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
@@ -952,9 +955,12 @@ def optimise(sInputFile, silentMode=False, res={}):
          if not settings.getboolean('Options','GZCopyMetadata'):
             sFlags += "-strμp ";
          iLevel = min(settings.getint('Options','Level') * 8 // 9, 8) + 1;
+         # Convert level 9 to level 90032 because it is faster and usually with higher savings
+         if iLevel == 9:
+            iLevel = 90032;
          sFlags += f"-{iLevel} ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ECT (5/8)",
-                   f"{winePrefixForced}{sPluginsDirectory}ECT{pluginExt} -quiet --allfilters -gzip {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}ECT{pluginExt} -quiet --mt-deflate --allfilters -gzip {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
@@ -974,14 +980,18 @@ def optimise(sInputFile, silentMode=False, res={}):
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("DeflOpt (8/8)",
                    f"{winePrefix}{sPluginsDirectory}deflopt.exe /a /b /s {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
-      # HTML: tidy-html5, Leanify
+      # HTML: tidy-html5, Minify, Leanify
       if set(Extension) & set(KS_EXTENSION_HTML):
          thisExt = list(set(Extension) & set(KS_EXTENSION_HTML))[0];
          if settings.getboolean('Options','HTMLEnableTidy'):
-            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("tidy (1/2)",
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("tidy (1/3)",
                       f"{winePrefixForced}{sPluginsDirectory}tidy{pluginExt} -config tidy.config -quiet -output \"%TMPOUTPUTFILE%\" \"%INPUTFILE%\" ",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
+
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Minify (2/3)",
+                      f"{winePrefixForced}{sPluginsDirectory}minify.exe \"%INPUTFILE%\" --output \"%TMPOUTPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
             sFlags = "";
             # iLevel = min(settings.getint('Options','Level') * 8 // 9, 8) + 1;
             # Overwrite Leanify iterations
@@ -990,8 +1000,8 @@ def optimise(sInputFile, silentMode=False, res={}):
             else:
                iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
             sFlags += f"-i {iLevel} ";
-            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (2/2)",
-                      f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (3/3)",
+                      f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q -p {sFlags}\"%TMPINPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # ICO: ImageMagick, Leanify
       if set(Extension) & set(KS_EXTENSION_ICO):
@@ -1021,7 +1031,7 @@ def optimise(sInputFile, silentMode=False, res={}):
                iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
             sFlags += f"-i {iLevel} ";
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (2/2)",
-                      f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q -p {sFlags}\"%TMPINPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # JPEG: Guetzli, jpeg-recompress, jhead, Leanify, ect, pingo, jpegoptim, jpegtran, mozjpegtran
       if set(Extension) & set(KS_EXTENSION_JPG):
@@ -1063,7 +1073,7 @@ def optimise(sInputFile, silentMode=False, res={}):
             iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
          sFlags += f"-i {iLevel} ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (4/10)",
-                   f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q -p {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          if settings.getboolean('Options','JPEGAllowLossy'):
@@ -1107,9 +1117,12 @@ def optimise(sInputFile, silentMode=False, res={}):
          if not settings.getboolean('Options','JPEGCopyMetadata'):
             sFlags += "-strip ";
          iLevel = min(settings.getint('Options','Level') * 8 // 9, 8) + 1;
+         # Convert level 9 to level 90032 because it is faster and usually with higher savings
+         if iLevel == 9:
+            iLevel = 90032;
          sFlags += f"-{iLevel} ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ECT (9/10)",
-                   f"{winePrefixForced}{sPluginsDirectory}ECT{pluginExt} -quiet --allfilters -progressive {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}ECT{pluginExt} -quiet --mt-deflate --allfilters -progressive {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          if not settings.getboolean('Options','JPEGCopyMetadata'):
@@ -1123,12 +1136,16 @@ def optimise(sInputFile, silentMode=False, res={}):
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("pingo (10/10)",
                       f"{winePrefix}{sPluginsDirectory}pingo.exe -progressive {sFlags}\"%TMPINPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
-      # JS: jsmin
+      # JS: jsmin, minify
       if (set(Extension) & set(KS_EXTENSION_JS)) or (set(Extension) & set(settings.get('Options','JSAdditionalExtensions').replace(";", " ").split(" "))):
          # If JSMin is enabled or it is a custom extension (we assume custom extensions always enable it)
          if settings.getboolean('Options','JSEnableJSMin') or (set(Extension) & set(settings.get('Options','JSAdditionalExtensions').replace(";", " ").split(" "))):
-            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("jsmin (1/1)",
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("jsmin (1/2)",
                       f"python -m jsmin \"%INPUTFILE%\" >\"%TMPOUTPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Minify (2/2)",
+                      f"{winePrefixForced}{sPluginsDirectory}minify.exe \"%INPUTFILE%\" --output \"%TMPOUTPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # LUA: Leanify
       if set(Extension) & set(KS_EXTENSION_LUA):
@@ -1143,7 +1160,7 @@ def optimise(sInputFile, silentMode=False, res={}):
                iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
             sFlags += f"-i {iLevel} ";
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (1/1)",
-                      f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q -p {sFlags}\"%TMPINPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # MIME: Leanify
       if set(Extension) & set(KS_EXTENSION_MIME):
@@ -1157,7 +1174,7 @@ def optimise(sInputFile, silentMode=False, res={}):
             iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
          sFlags += f"-i {iLevel} ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (1/1)",
-                   f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q -p {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # MKV: ffmpeg, mkclean
       if set(Extension) & set(KS_EXTENSION_MKV):
@@ -1184,17 +1201,6 @@ def optimise(sInputFile, silentMode=False, res={}):
       # MP3: MP3packer
       if set(Extension) & set(KS_EXTENSION_MP3):
          thisExt = list(set(Extension) & set(KS_EXTENSION_MP3))[0];
-         '''
-         sFlags = "";
-         if not settings.getboolean('Options','MP3CopyMetadata'):
-            sFlags += "-strip ";
-         iLevel = min(settings.getint('Options','Level') * 8 // 9, 8) + 1;
-         sFlags += f"-{iLevel} ";
-         iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ECT",
-                   f"{winePrefixForced}{sPluginsDirectory}ECT{pluginExt} -quiet --allfilters --mt-deflate {sFlags}\"%TMPINPUTFILE%\"",
-                   sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
-         '''
-
          sFlags = "";
          if not settings.getboolean('Options','MP3CopyMetadata'):
             sFlags += "-t -s ";
@@ -1411,7 +1417,7 @@ def optimise(sInputFile, silentMode=False, res={}):
             # Temporary disable Leanify because it removed IPTC metadata
             if not settings.getboolean('Options','PNGCopyMetadata'):
                iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (8/16)",
-                         f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
+                         f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q -p {sFlags}\"%TMPINPUTFILE%\"",
                          sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
             sFlags = "";
@@ -1450,9 +1456,12 @@ def optimise(sInputFile, silentMode=False, res={}):
          elif not settings.getboolean('Options','PNGCopyMetadata'):
             sFlags += "-strip ";
          iLevel = min(settings.getint('Options','Level') * 8 // 9, 8) + 1;
+         # Convert level 9 to level 90032 because it is faster and usually with higher savings
+         if iLevel == 9:
+            iLevel = 90032;
          sFlags += f"-{iLevel} ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ECT (12/16)",
-                   f"{winePrefixForced}{sPluginsDirectory}ECT{pluginExt} -quiet --allfilters {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}ECT{pluginExt} -quiet --mt-deflate --allfilters {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
@@ -1528,7 +1537,7 @@ def optimise(sInputFile, silentMode=False, res={}):
             iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
          sFlags += f"-i {iLevel} ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (5/5)",
-                   f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q -p {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # SQLITE: sqlite
       if set(Extension) & set(KS_EXTENSION_SQLITE):
@@ -1555,7 +1564,7 @@ def optimise(sInputFile, silentMode=False, res={}):
             iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
          sFlags += f"-i {iLevel} ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (1/1)",
-                   f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q -p {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # Tencent QQ: Leanify
       if set(Extension) & set(KS_EXTENSION_TENCENTQQ):
@@ -1570,7 +1579,7 @@ def optimise(sInputFile, silentMode=False, res={}):
                iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
             sFlags += f"-i {iLevel} ";
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (1/1)",
-                      f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
+                      f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q -p {sFlags}\"%TMPINPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
       # TGA: ImageMagick
@@ -1675,8 +1684,11 @@ def optimise(sInputFile, silentMode=False, res={}):
             else:
                iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; # 1, 1, 2, 3, 6, 9, 14, 21, 30
             sFlags += f"-i {iLevel} ";
-            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (1/1)",
-                      f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (1/2)",
+                      f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q -p {sFlags}\"%TMPINPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Minify (2/2)",
+                      f"{winePrefixForced}{sPluginsDirectory}minify.exe \"%INPUTFILE%\" --output \"%TMPOUTPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # WEBP: pingo, dwebp + cwebp, ImageWorsener
       if set(Extension) & set(KS_EXTENSION_WEBP):
@@ -1735,16 +1747,19 @@ def optimise(sInputFile, silentMode=False, res={}):
             # sFlags += "-f ";
          sFlags += "--zip-deflate ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (1/6)",
-                   f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q -p {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          sFlags = "";
          if not settings.getboolean('Options','ZIPCopyMetadata'):
             sFlags += "-strip ";
          iLevel = min(settings.getint('Options','Level') * 8 // 9, 8) + 1;
+         # Convert level 9 to level 90032 because it is faster and usually with higher savings
+         if iLevel == 9:
+            iLevel = 90032;
          sFlags += f"-{iLevel} ";
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ECT (2/6)",
-                   f"{winePrefixForced}{sPluginsDirectory}ECT{pluginExt} -quiet -zip {sFlags}\"%TMPINPUTFILE%\"",
+                   f"{winePrefixForced}{sPluginsDirectory}ECT{pluginExt} -quiet --mt-deflate -zip {sFlags}\"%TMPINPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
 
          # AdvZip strips header on ZIP files
