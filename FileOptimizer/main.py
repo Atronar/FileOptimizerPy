@@ -1,7 +1,7 @@
 '''
 Based on https://sourceforge.net/p/nikkhokkho/code/HEAD/tree/trunk/FileOptimizer/Source/cppMain.cpp
 and https://sourceforge.net/p/nikkhokkho/code/HEAD/tree/trunk/FileOptimizer/Source/clsUtil.cpp
-commit ver [r1613] 2021-03-19
+commit ver [r1624] 2021-04-18
 Author of original cpp code: Nikkho
 '''
 import os
@@ -315,7 +315,7 @@ def GetExtensionByContent(filename):
       if acBuffer[:8] == b"\x8A\x4D\x4E\x47\x0D\x0A\x1A\x0A":
          Extension = ".mng";
       # Check OGG / Check OGV
-      elif b"OggS" in acBuffer[:7]:
+      elif acBuffer[:4] == b"OggS":
          Extension = ".ogg";
       # Check OLE/OLE Beta
       elif (acBuffer[:8] == b"\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1") \
@@ -333,7 +333,7 @@ def GetExtensionByContent(filename):
       # Check TGA
       elif acBuffer[-18:-8] == b"TRUEVISION":
          Extension = ".tga";
-      # Check TIF
+      # Check TIFF
       elif (acBuffer[:2] == b"\x0C\xED") \
         or (acBuffer[:3] == b"\x49\x20\x49") \
         or (acBuffer[:4] == b"\x49\x49\x2A\x00") \

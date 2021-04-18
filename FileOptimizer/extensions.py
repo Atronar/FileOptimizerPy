@@ -1,6 +1,6 @@
 '''
 Define list from https://sourceforge.net/p/nikkhokkho/code/HEAD/tree/trunk/FileOptimizer/Source/cppMain.h
-commit ver [r1569] 2020-08-02
+commit ver [r1624] 2021-04-18
 Author of original cpp code: Nikkho
 '''
 KS_EXTENSION_BMP = (".bmp", ".dib",)
@@ -21,7 +21,7 @@ KS_EXTENSION_MNG = (".mng",)
 KS_EXTENSION_MP3 = (".mp3",)
 KS_EXTENSION_MP4 = (".mp4", ".3gp", ".3gg", ".3g2", ".m4a", ".m4b", ".m4p", ".m4r", ".m4v", ".acc", ".avi", ".mpg", ".mpeg", ".vob", ".flv", ".wmv", ".wma", ".rv", ".ra", ".rm", ".rmvb", ".ram", ".smil", ".qt", ".mov",)
 KS_EXTENSION_OBJ = (".obj", ".o", ".lib", ".a",)
-KS_EXTENSION_OGG = (".ogg", ".oga", ".ogx",)
+KS_EXTENSION_OGG = (".ogg", ".oga", ".ogx", ".ogm", ".spx", ".opus",)
 KS_EXTENSION_OGV = (".ogg", ".ogv", ".ogx",)
 KS_EXTENSION_OLE = (".ac", ".adp", ".apr", ".art", ".chm", ".chi", ".chq", ".chs", ".chw", ".db", ".doc", ".dot", ".fla", ".fpx", ".its", ".lit", ".max", ".mce", ".mdb", ".mdt", ".mic", ".mix", ".mpd", ".mpp", ".mpt", ".msc", ".msi", ".msg", ".msp", ".mst", ".mtw", ".mzz", ".ole", ".ole2", ".one", ".opt", ".ost", ".pps", ".ppt", ".pub", ".puz", ".rfa", ".rft", ".rte", ".rvt", ".sldasm", ".sldprt", ".slddrw", ".sou", ".spo stickynotes.snt thumbs.db", ".vsd", ".vst", ".vss", ".wiz", ".wps", ".xl", ".xla", ".xlc", ".xlm", ".xls", ".xlw", ".xsf", ".xsn",)
 KS_EXTENSION_PCX = (".dcx", ".pcc", ".pcx",)
