@@ -77,6 +77,7 @@ sudo make install &&
 sudo ln -s /opt/mozjpeg/bin/cjpeg /usr/bin/mozjpeg &&
 sudo ln -s /opt/mozjpeg/bin/jpegtran /usr/bin/mozjpegtran &&
 cp /opt/mozjpeg/bin/jpegtran ~/FOPlugins/mozjpegtran &&
+cd ../.. &&
 git clone https://github.com/danielgtaylor/jpeg-archive.git &&
 cd jpeg-archive/ &&
 make &&
