@@ -3,8 +3,8 @@ from .main import optimiseDir
 
 def main():
    parser = argparse.ArgumentParser();
-   parser.add_argument('input',nargs='*',help='input file');
-   parser.add_argument('-s','--silent', action='store_true', help='run without output print');
+   parser.add_argument('input', nargs='*', help='input file');
+   parser.add_argument('-s', '--silent', action='store_true', help='run without output print');
    args = parser.parse_args();
    deduped_input = []
    for inputfile in args.input:
@@ -14,4 +14,4 @@ def main():
       optimiseDir(inputfile, silentMode=args.silent)
 
 if __name__ == "__main__":
-    main()
+   main()

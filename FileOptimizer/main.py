@@ -540,15 +540,15 @@ def RunPlugin(psStatus, psCommandLine, psInputFile, psOutputFile, piErrorMin, pi
 
    if not silentMode:
       print(f"{SetCellFileValue(sInputFile)} ", f" {Extension} ", f" {KI_GRID_ORIGINAL} ", f" {KI_GRID_OPTIMIZED} ", f" {KI_GRID_STATUS} ", sep="\t", end="\r");
-   Log(3, f"Start: {time.strftime('%Y/%m/%d %H:%M:%S',time.localtime(dteStart))}\t" \
-          f"End: {time.strftime('%Y/%m/%d %H:%M:%S',time.localtime(dteEnd))}\t" \
-          f"Level: {settings.get('Options','Level')}\t" \
-          f"Original: {lSize}\t" \
-          f"Optimized: {lSizeNew}\t" \
-          f"Errorlevel: {iError}\t" \
-          f"Input: {os.path.abspath(sInputFile) if sInputFile else sInputFile}\t" \
-          f"Output: {os.path.abspath(sOutputFile) if sOutputFile else sOutputFile}\t" \
-          f"Plugin: {psStatus}\t" \
+   Log(3, f"Start: {time.strftime('%Y/%m/%d %H:%M:%S',time.localtime(dteStart))}\t"
+          f"End: {time.strftime('%Y/%m/%d %H:%M:%S',time.localtime(dteEnd))}\t"
+          f"Level: {settings.get('Options','Level')}\t"
+          f"Original: {lSize}\t"
+          f"Optimized: {lSizeNew}\t"
+          f"Errorlevel: {iError}\t"
+          f"Input: {os.path.abspath(sInputFile) if sInputFile else sInputFile}\t"
+          f"Output: {os.path.abspath(sOutputFile) if sOutputFile else sOutputFile}\t"
+          f"Plugin: {psStatus}\t"
           f"Commandline: {sCommandLine}",
        settings.getint('Options','LogLevel'));
 
@@ -1841,7 +1841,7 @@ def optimise(sInputFile, silentMode=False, res={}):
       sTime = time.gmtime(acTime);
       sTime = ":".join(f"{t}" for t in (sTime.tm_mday-1, sTime.tm_hour, sTime.tm_min, sTime.tm_sec) if t);
       if not sTime:
-         sTime = f"0 sec";
+         sTime = "0 sec";
       elif ":" not in sTime:
          sTime = f"{sTime} sec";
 
