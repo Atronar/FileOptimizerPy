@@ -27,6 +27,9 @@ __all__ = [
   "optimiseDir", "optimizeDir"
 ]
 
+def rreplace(string, old, new, count=-1):
+   return new.join(string.rsplit(old,count));
+
 if sys.platform == "win32":
    pluginExt = ".exe"
    winePrefix = ""
@@ -404,6 +407,19 @@ def RunPlugin(psStatus, psCommandLine, psInputFile, psOutputFile, piErrorMin, pi
 
    Returns tuple with exit code, optimised size and status string.
    '''
+   # Fix for long paths in Windows
+   sInputFile_visible = psInputFile;
+   sOutputFile_visible = psOutputFile;
+   if sys.platform == "win32":
+      if psInputFile.startswith('\\\\?\\'):
+         sInputFile_visible = psInputFile[4:];
+      elif os.path.splitdrive(psInputFile)[0]:
+         psInputFile = f"\\\\?\\{psInputFile}";
+      if psOutputFile.startswith('\\\\?\\'):
+         sOutputFile_visible = psOutputFile[4:];
+      elif os.path.splitdrive(psOutputFile)[0]:
+         psOutputFile = f"\\\\?\\{psOutputFile}";
+
    # Check if it is an excluded plugins
    PluginMask = settings.get('Options','DisablePluginMask').upper().split(";");
    for Token in PluginMask:
@@ -431,6 +447,11 @@ def RunPlugin(psStatus, psCommandLine, psInputFile, psOutputFile, piErrorMin, pi
    else:
       TempPath = tempfile.gettempdir()
 
+   # Fix for long paths in Windows
+   TempPath_visible = TempPath;
+   if sys.platform == "win32" and not TempPath.startswith('\\\\?\\') and os.path.splitdrive(TempPath)[0]:
+      TempPath = f"\\\\?\\{TempPath}";
+
    basename = os.path.basename(sInputFile)
    sTmpInputFile = os.path.join(TempPath, f"FileOptimizer_Input_{iRandom}_{basename}");
    sTmpOutputFile = os.path.join(TempPath, f"FileOptimizer_Output_{iRandom}_{basename}");
@@ -452,8 +473,8 @@ def RunPlugin(psStatus, psCommandLine, psInputFile, psOutputFile, piErrorMin, pi
    if ("%OUTPUTFILE%" not in psCommandLine) and ("%TMPOUTPUTFILE%" not in psCommandLine):
       shutil.copy2(sInputFile,sTmpInputFile, follow_symlinks=False)
       # sInputFile = sTmpOutputFile;
-   sCommandLine = sCommandLine.replace("%INPUTFILE%", os.path.abspath(sInputFile) if sInputFile else sInputFile);
-   sCommandLine = sCommandLine.replace("%OUTPUTFILE%", os.path.abspath(sOutputFile) if sOutputFile else sOutputFile);
+   sCommandLine = sCommandLine.replace("%INPUTFILE%", os.path.abspath(sInputFile_visible) if sInputFile else sInputFile);
+   sCommandLine = sCommandLine.replace("%OUTPUTFILE%", os.path.abspath(sOutputFile_visible) if sOutputFile else sOutputFile);
    sCommandLine = sCommandLine.replace("%TMPINPUTFILE%", sTmpInputFile);
    sCommandLine = sCommandLine.replace("%TMPOUTPUTFILE%", sTmpOutputFile);
 
@@ -487,8 +508,8 @@ def RunPlugin(psStatus, psCommandLine, psInputFile, psOutputFile, piErrorMin, pi
          if ("%OUTPUTFILE%" not in psCommandLine) and ("%TMPOUTPUTFILE%" not in psCommandLine):
             shutil.copy2(sInputFile,sTmpInputFile, follow_symlinks=False)
             # sInputFile = sTmpOutputFile;
-         sCommandLine = sCommandLine.replace("%INPUTFILE%", os.path.abspath(sInputFile) if sInputFile else sInputFile);
-         sCommandLine = sCommandLine.replace("%OUTPUTFILE%", os.path.abspath(sOutputFile) if sOutputFile else sOutputFile);
+         sCommandLine = sCommandLine.replace("%INPUTFILE%", os.path.abspath(sInputFile_visible) if sInputFile else sInputFile);
+         sCommandLine = sCommandLine.replace("%OUTPUTFILE%", os.path.abspath(sOutputFile_visible) if sOutputFile else sOutputFile);
          sCommandLine = sCommandLine.replace("%TMPINPUTFILE%", sTmpInputFile);
          sCommandLine = sCommandLine.replace("%TMPOUTPUTFILE%", sTmpOutputFile);
          iError = RunProcess(sCommandLine, True);
@@ -539,15 +560,15 @@ def RunPlugin(psStatus, psCommandLine, psInputFile, psOutputFile, piErrorMin, pi
       KI_GRID_OPTIMIZED = lSizeNew
 
    if not silentMode:
-      print(f"{SetCellFileValue(sInputFile)} ", f" {Extension} ", f" {KI_GRID_ORIGINAL} ", f" {KI_GRID_OPTIMIZED} ", f" {KI_GRID_STATUS} ", sep="\t", end="\r");
+      print(f"{SetCellFileValue(sInputFile_visible)} ", f" {Extension} ", f" {KI_GRID_ORIGINAL} ", f" {KI_GRID_OPTIMIZED} ", f" {KI_GRID_STATUS} ", sep="\t", end="\r");
    Log(3, f"Start: {time.strftime('%Y/%m/%d %H:%M:%S',time.localtime(dteStart))}\t"
           f"End: {time.strftime('%Y/%m/%d %H:%M:%S',time.localtime(dteEnd))}\t"
           f"Level: {settings.get('Options','Level')}\t"
           f"Original: {lSize}\t"
           f"Optimized: {lSizeNew}\t"
           f"Errorlevel: {iError}\t"
-          f"Input: {os.path.abspath(sInputFile) if sInputFile else sInputFile}\t"
-          f"Output: {os.path.abspath(sOutputFile) if sOutputFile else sOutputFile}\t"
+          f"Input: {os.path.abspath(sInputFile_visible) if sInputFile_visible else sInputFile_visible}\t"
+          f"Output: {os.path.abspath(sOutputFile_visible) if sOutputFile_visible else sOutputFile_visible}\t"
           f"Plugin: {psStatus}\t"
           f"Commandline: {sCommandLine}",
        settings.getint('Options','LogLevel'));
@@ -687,12 +708,17 @@ def optimise(sInputFile, silentMode=False, res={}):
 
    Returns `res`.
    '''
+   # Fix for long paths in Windows
+   sInputFile_visible = sInputFile;
+   if sys.platform == "win32" and not sInputFile.startswith('\\\\?\\') and os.path.splitdrive(sInputFile)[0]:
+      sInputFile = f"\\\\?\\{sInputFile}";
+
    basename = os.path.basename(sInputFile);
    KI_GRID_OPTIMIZED = KI_GRID_ORIGINAL = 0;
    thisExt = ""
 
    # Required indirection
-   sCaption = f"Processing {sInputFile}...";
+   sCaption = f"Processing {sInputFile_visible}...";
    KI_GRID_STATUS = "Pending";
 
    iStartTicks = time.perf_counter();
@@ -828,7 +854,7 @@ def optimise(sInputFile, silentMode=False, res={}):
       if set(Extension) & set(KS_EXTENSION_FLAC):
          thisExt = list(set(Extension) & set(KS_EXTENSION_FLAC))[0];
          if not settings.getboolean('Options','WAVCopyMetadata'):
-            sTmpOutputFile = sInputFile.replace(".flac", "-stripped.flac");
+            sTmpOutputFile = rreplace(sInputFile, ".flac", "-stripped.flac", 1);
             # Prevent a bug in shntool with no lowercase extensions
             if sTmpOutputFile == sInputFile:
                sTmpOutputFile += "-stripped.flac";
@@ -844,7 +870,7 @@ def optimise(sInputFile, silentMode=False, res={}):
             if not settings.getboolean('Options','Debug'):
                os.remove(sTmpOutputFile);
             if settings.getboolean('Options','WAVStripSilence'):
-               sTmpOutputFile = sInputFile.replace(".flac", "-trimmed.flac");
+               sTmpOutputFile = rreplace(sInputFile, ".flac", "-trimmed.flac", 1);
                # Prevent a bug in shntool with no lowercase extensions
                if (sTmpOutputFile == sInputFile):
                   sTmpOutputFile += "-trimmed.flac";
@@ -1503,7 +1529,7 @@ def optimise(sInputFile, silentMode=False, res={}):
       # SWF: Leanfy, flasm, zRecompress
       if set(Extension) & set(KS_EXTENSION_SWF):
          thisExt = list(set(Extension) & set(KS_EXTENSION_SWF))[0];
-         sTmpOutputFile = sInputFile.replace(".swf", ".$wf");
+         sTmpOutputFile = rreplace(sInputFile, ".swf", ".$wf", 1);
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("flasm (1/5)",
                    f"{winePrefixForced}{sPluginsDirectory}flasm{pluginExt} -x \"%INPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
@@ -1514,7 +1540,7 @@ def optimise(sInputFile, silentMode=False, res={}):
                    f"{winePrefixForced}{sPluginsDirectory}flasm{pluginExt} -u \"%INPUTFILE%\"",
                    sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
          shutil.copy2(sTmpOutputFile, sInputFile, follow_symlinks=False);
-         os.remove(sInputFile.replace(".swf", ".$wf"));
+         os.remove(rreplace(sInputFile, ".swf", ".$wf", 1));
 
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("flasm (3/5)",
                    f"{winePrefixForced}{sPluginsDirectory}flasm{pluginExt} -z \"%INPUTFILE%\"",
@@ -1522,7 +1548,7 @@ def optimise(sInputFile, silentMode=False, res={}):
          if os.stat(sTmpOutputFile).st_size < KI_GRID_OPTIMIZED:
             shutil.copy2(sTmpOutputFile, sInputFile, follow_symlinks=False);
             KI_GRID_OPTIMIZED = os.stat(sInputFile).st_size;
-         os.remove(sInputFile.replace(".swf", ".$wf"));
+         os.remove(rreplace(sInputFile, ".swf", ".$wf", 1));
 
          iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("zRecompress (4/5)",
                    f"{winePrefix}{sPluginsDirectory}zRecompress.exe -tswf-lzma \"%TMPINPUTFILE%\"",
@@ -1645,7 +1671,7 @@ def optimise(sInputFile, silentMode=False, res={}):
       if set(Extension) & set(KS_EXTENSION_WAV):
          thisExt = list(set(Extension) & set(KS_EXTENSION_WAV))[0];
          if not settings.getboolean('Options','WAVCopyMetadata'):
-            sTmpOutputFile = sInputFile.replace(".wav", "-stripped.wav");
+            sTmpOutputFile = rreplace(sInputFile, ".wav", "-stripped.wav", 1);
             # Prevent a bug in shntool with no lowercase extensions
             if sTmpOutputFile == sInputFile:
                sTmpOutputFile += "-stripped.wav";
@@ -1659,7 +1685,7 @@ def optimise(sInputFile, silentMode=False, res={}):
             if not settings.getboolean('Options','Debug'):
                os.remove(sTmpOutputFile);
             if settings.getboolean('Options','WAVStripSilence'):
-               sTmpOutputFile = sInputFile.replace(".wav", "-trimmed.wav");
+               sTmpOutputFile = rreplace(sInputFile, ".wav", "-trimmed.wav", 1);
                # Prevent a bug in shntool with no lowercase extensions
                if sTmpOutputFile == sInputFile:
                   sTmpOutputFile += "-trimmed.wav";
@@ -1849,8 +1875,8 @@ def optimise(sInputFile, silentMode=False, res={}):
       KI_GRID_STATUS = sCaption;
 
    if not silentMode:
-      print(f"{SetCellFileValue(sInputFile)} ", f" {thisExt} ", f" {KI_GRID_ORIGINAL} ", f" {KI_GRID_OPTIMIZED} ", f" {KI_GRID_STATUS} ", sep="\t", end="\n");
-   res.update({"InputFile": os.path.abspath(sInputFile),
+      print(f"{SetCellFileValue(sInputFile_visible)} ", f" {thisExt} ", f" {KI_GRID_ORIGINAL} ", f" {KI_GRID_OPTIMIZED} ", f" {KI_GRID_STATUS} ", sep="\t", end="\n");
+   res.update({"InputFile": os.path.abspath(sInputFile_visible),
                "Extension": thisExt,
                "Original": KI_GRID_ORIGINAL,
                "Optimized": KI_GRID_OPTIMIZED,
