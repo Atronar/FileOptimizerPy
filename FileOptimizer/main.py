@@ -1,7 +1,7 @@
-'''
+﻿'''
 Based on https://sourceforge.net/p/nikkhokkho/code/HEAD/tree/trunk/FileOptimizer/Source/cppMain.cpp
 and https://sourceforge.net/p/nikkhokkho/code/HEAD/tree/trunk/FileOptimizer/Source/clsUtil.cpp
-commit ver [r1624] 2021-04-18
+commit ver [r1641] 2021-07-23
 Author of original cpp code: Nikkho
 '''
 import os
@@ -679,6 +679,9 @@ def IsEXESFX(pacFile):
       # Check if it is a 7-ZIP SFX
       elif b"\x37\x7A\xBC\xAF\x27\x1C" in acBuffer:
          bRes = True;
+      #Check if it is a SFXCAB
+      elif b"MSCF" in acBuffer:
+         bRes = True;
    return bRes;
 
 # Распознание PDF со слоями
@@ -815,19 +818,19 @@ def optimise(sInputFile, silentMode=False, res={}):
       # EXE: Leanify, PETrim, strip, UPX
       if set(Extension) & set(KS_EXTENSION_EXE):
          thisExt = list(set(Extension) & set(KS_EXTENSION_EXE))[0];
-         sFlags = "";
-         # iLevel = min(settings.getint('Options','Level') * 8 // 9, 8) + 1;
-         # Overwrite Leanify iterations
-         if settings.getint('Options','LeanifyIterations') != -1:
-            iLevel = settings.getint('Options','LeanifyIterations');
-         else:
-            iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; #1, 1, 2, 3, 6, 9, 14, 21, 30
-         sFlags += f"-i {iLevel} ";
-         iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (1/4)",
-                   f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q -p {sFlags}\"%TMPINPUTFILE%\"",
-                   sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
-
          if not IsEXESFX(sInputFile):
+            sFlags = "";
+            # iLevel = min(settings.getint('Options','Level') * 8 // 9, 8) + 1;
+            # Overwrite Leanify iterations
+            if settings.getint('Options','LeanifyIterations') != -1:
+               iLevel = settings.getint('Options','LeanifyIterations');
+            else:
+               iLevel = settings.getint('Options','Level') ** 3 // 25 + 1; #1, 1, 2, 3, 6, 9, 14, 21, 30
+            sFlags += f"-i {iLevel} ";
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("Leanify (1/4)",
+                      f"{winePrefixForced}{sPluginsDirectory}leanify{pluginExt} -q -p {sFlags}\"%TMPINPUTFILE%\"",
+                      sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
+
             if not settings.getboolean('Options','EXEDisablePETrim'):
                iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("PETrim (2/4)",
                          f"{winePrefix}{sPluginsDirectory}petrim.exe /StripFixups:Y \"%TMPINPUTFILE%\"",
@@ -1292,7 +1295,7 @@ def optimise(sInputFile, silentMode=False, res={}):
             iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("ImageMagick (1/1)",
                       f"{sPluginsDirectory}convert \"%INPUTFILE%\" -quiet -compress RLE {sFlags}\"%TMPOUTPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
-      # PDF: mutool, ghostcript, cpdfsqueeze
+      # PDF: mutool, ghostcript, cpdf
       if set(Extension) & set(KS_EXTENSION_PDF):
          thisExt = list(set(Extension) & set(KS_EXTENSION_PDF))[0];
          bIsPDFLayered = IsPDFLayered(sInputFile);
@@ -1345,8 +1348,8 @@ def optimise(sInputFile, silentMode=False, res={}):
                if os.path.exists(acTmpFilePdf) and not settings.getboolean('Options','Debug'):
                   os.remove(acTmpFilePdf);
 
-            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("cpdfsqueeze (3/3)",
-                      f"{winePrefixForced}{sPluginsDirectory}cpdfsqueeze{pluginExt} \"%INPUTFILE%\" \"%TMPOUTPUTFILE%\"",
+            iError, KI_GRID_OPTIMIZED, KI_GRID_STATUS = RunPlugin("cpdf (3/3)",
+                      f"{winePrefixForced}{sPluginsDirectory}cpdf{pluginExt} -squeeze \"%INPUTFILE%\" -o \"%TMPOUTPUTFILE%\"",
                       sInputFile, "", 0, 0, Extension=thisExt, KI_GRID_ORIGINAL=KI_GRID_ORIGINAL, KI_GRID_OPTIMIZED=KI_GRID_OPTIMIZED, KI_GRID_STATUS=KI_GRID_STATUS, silentMode=silentMode);
       # PNG: apngopt, pngquant, PngOptimizer, TruePNG, pngout, optipng, pngwolf, Leanify, ect, pingo, advpng, deflopt, defluff, deflopt
       if set(Extension) & set(KS_EXTENSION_PNG):
@@ -1733,6 +1736,7 @@ def optimise(sInputFile, silentMode=False, res={}):
          sFlags = "";
          iLevel = min(settings.getint('Options','Level') * 5 // 9, 5) + 1;
          sFlags += f"-m {iLevel} ";
+         sFlags += f"-z {iLevel} ";
 
          acTmpFileWebp = f"{os.path.splitext(sInputFile)[0]}.png";
          acTmpFileWebp = GetShortName(acTmpFileWebp);

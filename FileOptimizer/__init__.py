@@ -1,7 +1,7 @@
-from .main import *
+﻿from .main import *
 from .main import __all__
 
 __title__ = "FileOptimizerPy"
-__version__ = "1.1.1624"
+__version__ = "1.1.1641"
 __author__ = "ATroN"
 __license__ = "AGPLv3"

@@ -1,11 +1,11 @@
-# FileOptimizerPy
+﻿# FileOptimizerPy
 ---
 Python module and utility for file compression with several optimization plugins.
 
 Based on utility [FileOptimiser](https://nikkhokkho.sourceforge.io/static.php?page=FileOptimizer) by Nikkho.
 
 License: **AGPLv3**
-Version: **1.1.1624**
+Version: **1.1.1641**
 Python version: **>=3.6**
 
 Required plugins from original utility: 
