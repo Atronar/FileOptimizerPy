@@ -495,9 +495,15 @@ def RunPlugin(psStatus, psCommandLine, psInputFile, psOutputFile, piErrorMin, pi
          fixInput = True;
          if not settings.getboolean('Options','Debug'):
             if os.path.exists(sTmpInputFile):
-               os.remove(sTmpInputFile);
+               try:
+                  os.remove(sTmpInputFile);
+               except PermissionError:
+                  pass;
             if os.path.exists(sTmpOutputFile):
-               os.remove(sTmpOutputFile);
+               try:
+                  os.remove(sTmpOutputFile);
+               except PermissionError:
+                  pass;
          sTmpInputFile = os.path.join(TempPath, f"FileOptimizer_Input_{iRandom}_{basename}{Extension}");
          sTmpOutputFile = os.path.join(TempPath, f"FileOptimizer_Output_{iRandom}_{basename}{Extension}");
          if not settings.getboolean('Options','Debug'):
@@ -540,20 +546,41 @@ def RunPlugin(psStatus, psCommandLine, psInputFile, psOutputFile, piErrorMin, pi
 
    if not settings.getboolean('Options','Debug'):
       if os.path.exists(sTmpInputFile):
-         os.remove(sTmpInputFile);
+         try:
+            os.remove(sTmpInputFile);
+         except PermissionError:
+            pass;
       if os.path.exists(sTmpOutputFile):
-         os.remove(sTmpOutputFile);
+         try:
+            os.remove(sTmpOutputFile);
+         except PermissionError:
+            pass;
       if fixInput and os.path.exists(sInputFile):
-         os.remove(sInputFile);
+         try:
+            os.remove(sInputFile);
+         except PermissionError:
+            pass;
          sInputFile = presInputFile;
       if os.path.exists(presTmpOutputFile):
-         os.remove(presTmpOutputFile);
+         try:
+            os.remove(presTmpOutputFile);
+         except PermissionError:
+            pass;
       if os.path.exists(presTmpInputFile):
-         os.remove(presTmpInputFile);
+         try:
+            os.remove(presTmpInputFile);
+         except PermissionError:
+            pass;
       if os.path.exists(f"{presTmpOutputFile}{Extension}"):
-         os.remove(f"{presTmpOutputFile}{Extension}");
+         try:
+            os.remove(f"{presTmpOutputFile}{Extension}");
+         except PermissionError:
+            pass;
       if os.path.exists(f"{presTmpInputFile}{Extension}"):
-         os.remove(f"{presTmpInputFile}{Extension}");
+         try:
+            os.remove(f"{presTmpInputFile}{Extension}");
+         except PermissionError:
+            pass;
 
    if (lSizeNew <= 8) or (lSizeNew >= lSize):
       lSizeNew = lSize;
