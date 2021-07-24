@@ -410,7 +410,7 @@ def RunPlugin(psStatus, psCommandLine, psInputFile, psOutputFile, piErrorMin, pi
    # Fix for long paths in Windows
    sInputFile_visible = psInputFile;
    sOutputFile_visible = psOutputFile;
-   if sys.platform == "win32":
+   if sys.platform == "win32" and (len(psInputFile)>260 or len(psOutputFile)>260):
       if psInputFile.startswith('\\\\?\\'):
          sInputFile_visible = psInputFile[4:];
       elif os.path.splitdrive(psInputFile)[0]:
@@ -447,12 +447,13 @@ def RunPlugin(psStatus, psCommandLine, psInputFile, psOutputFile, piErrorMin, pi
    else:
       TempPath = tempfile.gettempdir()
 
+   basename = os.path.basename(sInputFile)
+
    # Fix for long paths in Windows
    TempPath_visible = TempPath;
-   if sys.platform == "win32" and not TempPath.startswith('\\\\?\\') and os.path.splitdrive(TempPath)[0]:
+   if sys.platform == "win32" and len(TempPath)+26+len(basename)>260 and not TempPath.startswith('\\\\?\\') and os.path.splitdrive(TempPath)[0]:
       TempPath = f"\\\\?\\{TempPath}";
 
-   basename = os.path.basename(sInputFile)
    sTmpInputFile = os.path.join(TempPath, f"FileOptimizer_Input_{iRandom}_{basename}");
    sTmpOutputFile = os.path.join(TempPath, f"FileOptimizer_Output_{iRandom}_{basename}");
 
@@ -713,7 +714,7 @@ def optimise(sInputFile, silentMode=False, res={}):
    '''
    # Fix for long paths in Windows
    sInputFile_visible = sInputFile;
-   if sys.platform == "win32" and not sInputFile.startswith('\\\\?\\') and os.path.splitdrive(sInputFile)[0]:
+   if sys.platform == "win32" and len(sInputFile)>260 and not sInputFile.startswith('\\\\?\\') and os.path.splitdrive(sInputFile)[0]:
       sInputFile = f"\\\\?\\{sInputFile}";
 
    basename = os.path.basename(sInputFile);
